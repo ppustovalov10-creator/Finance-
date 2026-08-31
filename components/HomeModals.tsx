@@ -94,8 +94,11 @@ export function GoalEditModal({ show, onClose, state, refresh }: ModalBaseProps)
   const [target, setTarget] = useState(state.goal.target ? String(state.goal.target) : "");
   const [saved, setSaved] = useState(String(state.goal.saved || 0));
   const [deadline, setDeadline] = useState(state.goal.deadlineDate || "");
+  const [isNewMoney, setIsNewMoney] = useState(false);
   const [err, setErr] = useState("");
   const [busy, setBusy] = useState(false);
+
+  const savedChanged = parseFloat(saved) !== (state.goal.saved || 0);
 
   async function save() {
     setErr("");
@@ -108,7 +111,7 @@ export function GoalEditModal({ show, onClose, state, refresh }: ModalBaseProps)
     if (!isValidDDMMYYYY(deadline)) return setErr("Дедлайн в формате ДД.ММ.ГГГГ, например 09.10.2026");
     setBusy(true);
     try {
-      await api.updateGoal({ name: nameTrim, target: targetVal, saved: savedVal, deadlineDate: deadline });
+      await api.updateGoal({ name: nameTrim, target: targetVal, saved: savedVal, deadlineDate: deadline, isNewMoney });
       await refresh();
       onClose();
     } catch (e) {
@@ -127,6 +130,30 @@ export function GoalEditModal({ show, onClose, state, refresh }: ModalBaseProps)
       <DescInput type="number" placeholder="₽" value={target} onChange={(e) => setTarget(e.target.value)} />
       <FieldLabel>Уже накоплено всего</FieldLabel>
       <DescInput type="number" placeholder="₽" value={saved} onChange={(e) => setSaved(e.target.value)} />
+      {savedChanged && (
+        <label
+          style={{
+            display: "flex",
+            alignItems: "flex-start",
+            gap: 8,
+            fontSize: 12,
+            color: "#332B1E",
+            margin: "-8px 0 14px",
+            cursor: "pointer",
+          }}
+        >
+          <input
+            type="checkbox"
+            checked={isNewMoney}
+            onChange={(e) => setIsNewMoney(e.target.checked)}
+            style={{ marginTop: 2 }}
+          />
+          <span>
+            Это новые деньги, отложенные на этой неделе (уменьшит баланс недели). Если не отмечено — считаем, что это
+            просто поправка суммы (например, деньги, отложенные ещё до приложения), баланс недели не трогаем.
+          </span>
+        </label>
+      )}
       <FieldLabel>Дедлайн</FieldLabel>
       <DescInput placeholder="ДД.ММ.ГГГГ" value={deadline} onChange={(e) => setDeadline(e.target.value)} />
       <ErrText>{err}</ErrText>
@@ -184,8 +211,11 @@ export function ReserveEditModal({ show, onClose, state, refresh }: ModalBasePro
   const [pctPercent, setPctPercent] = useState(String(Math.round(state.reserve.pct * 100)));
   const [saved, setSaved] = useState(String(state.reserve.saved));
   const [withdraw, setWithdraw] = useState("");
+  const [isNewMoney, setIsNewMoney] = useState(false);
   const [err, setErr] = useState("");
   const [busy, setBusy] = useState(false);
+
+  const savedChanged = parseFloat(saved) !== state.reserve.saved;
 
   async function save() {
     setErr("");
@@ -196,7 +226,7 @@ export function ReserveEditModal({ show, onClose, state, refresh }: ModalBasePro
     setBusy(true);
     try {
       const w = withdraw.trim() !== "" ? parseFloat(withdraw) : null;
-      await api.updateReserve({ pctPercent: pctVal, saved: savedVal, withdraw: w && w > 0 ? w : null });
+      await api.updateReserve({ pctPercent: pctVal, saved: savedVal, withdraw: w && w > 0 ? w : null, isNewMoney });
       await refresh();
       onClose();
     } catch (e) {
@@ -214,6 +244,30 @@ export function ReserveEditModal({ show, onClose, state, refresh }: ModalBasePro
       <DescInput type="number" placeholder="например, 5" value={pctPercent} onChange={(e) => setPctPercent(e.target.value)} />
       <FieldLabel>Накоплено сейчас (поправить вручную)</FieldLabel>
       <DescInput type="number" value={saved} onChange={(e) => setSaved(e.target.value)} />
+      {savedChanged && (
+        <label
+          style={{
+            display: "flex",
+            alignItems: "flex-start",
+            gap: 8,
+            fontSize: 12,
+            color: "#332B1E",
+            margin: "-8px 0 14px",
+            cursor: "pointer",
+          }}
+        >
+          <input
+            type="checkbox"
+            checked={isNewMoney}
+            onChange={(e) => setIsNewMoney(e.target.checked)}
+            style={{ marginTop: 2 }}
+          />
+          <span>
+            Это новые деньги, отложенные на этой неделе (уменьшит баланс недели). Если не отмечено — считаем, что это
+            просто поправка суммы, баланс недели не трогаем.
+          </span>
+        </label>
+      )}
       <FieldLabel>Использовать из подушки сейчас (форс-мажор)</FieldLabel>
       <DescInput type="number" placeholder="сумма, ₽ — необязательно" value={withdraw} onChange={(e) => setWithdraw(e.target.value)} />
       <ErrText>{err}</ErrText>

@@ -219,40 +219,52 @@ export interface KassaDayInfo {
   isFuture: boolean;
   dayTotal: number;
   dayEntries: KassaEntry[];
+  dayTarget: number;
   comment: string;
   commentClass: "" | "ok" | "warn";
 }
 
+/**
+ * Each day's target is recomputed from what's actually left to earn, spread
+ * over the remaining working days — not a fixed 1/5th of the weekly goal.
+ * A day that falls short pushes its shortfall onto the rest of the week
+ * (the following days' targets rise); a day that overshoots frees up the
+ * rest of the week (their targets fall). Future/untouched days always show
+ * this rolling target so the plan is visible before it's due.
+ */
 export function calcKassaDayBreakdown(
   weekStartDate: string,
   entries: KassaEntry[],
-  dailyTarget: number,
+  requiredKassa: number,
   now: Date = new Date()
 ): KassaDayInfo[] {
   const todayStr = toDDMMYYYY(now);
   const workDays = workingDaysOfWeek(weekStartDate);
+  const totalDays = workDays.length;
 
-  let cumulative = 0;
+  let enteredBefore = 0;
   return workDays.map((dateStr, idx) => {
     const isFuture = dateToSortable(dateStr) > dateToSortable(todayStr);
     const dayEntries = entries.filter((e) => e.date === dateStr);
     const dayTotal = dayEntries.reduce((s, e) => s + e.amount, 0);
-    if (!isFuture) cumulative += dayTotal;
     const isToday = dateStr === todayStr;
+
+    const remainingDays = totalDays - idx;
+    const dayTarget = Math.max(0, (requiredKassa - enteredBefore) / remainingDays);
 
     let comment = "";
     let commentClass: "" | "ok" | "warn" = "";
     if (!isFuture) {
-      const expected = dailyTarget * (idx + 1);
-      if (cumulative >= expected) {
+      if (dayTotal >= dayTarget) {
         comment = "В графике.";
         commentClass = "ok";
       } else {
-        comment = `Отстаёшь на ${fmt(expected - cumulative)}, нужно наверстать.`;
+        comment = `Отстаёшь на ${fmt(dayTarget - dayTotal)}, остаток перейдёт на оставшиеся дни.`;
         commentClass = "warn";
       }
+      enteredBefore += dayTotal;
     }
 
-    return { dateStr, dow: dowName(dateStr), isToday, isFuture, dayTotal, dayEntries, comment, commentClass };
+    return { dateStr, dow: dowName(dateStr), isToday, isFuture, dayTotal, dayEntries, dayTarget, comment, commentClass };
   });
 }

@@ -5,6 +5,7 @@ interface Body {
   pctPercent: number; // 0-100 as entered by the user
   saved: number;
   withdraw: number | null;
+  isNewMoney?: boolean;
 }
 
 export const PUT = withUser(async (userId, req) => {
@@ -17,5 +18,6 @@ export const PUT = withUser(async (userId, req) => {
     pct: body.pctPercent / 100,
     saved: body.saved,
     withdraw: body.withdraw && body.withdraw > 0 ? body.withdraw : null,
+    isNewMoney: !!body.isNewMoney,
   });
 });

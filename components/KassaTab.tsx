@@ -56,7 +56,9 @@ export default function KassaTab({ showToast, budgetState }: { showToast: ShowTo
   const progress = progressForTarget(target, state.entries);
   const hasKassaGoal = target.requiredKassa > 0;
   const over = hasKassaGoal && progress.totalEntered > target.requiredKassa;
-  const days = calcKassaDayBreakdown(state.weekStartDate, state.entries, progress.dailyTarget);
+  const days = calcKassaDayBreakdown(state.weekStartDate, state.entries, target.requiredKassa);
+  const todayInfo = days.find((d) => d.isToday) ?? days.find((d) => d.isFuture) ?? days[days.length - 1];
+  const liveDailyTarget = todayInfo ? todayInfo.dayTarget : progress.dailyTarget;
 
   return (
     <div className="max-w-[420px] mx-auto px-5 pt-6 pb-[100px]">
@@ -73,7 +75,7 @@ export default function KassaTab({ showToast, budgetState }: { showToast: ShowTo
           <>
             <div className="font-display font-semibold text-[26px]">{fmt(target.requiredKassa)}</div>
             <div className="text-[12.5px] mt-1" style={{ color: "var(--muted)" }}>
-              {fmt(progress.dailyTarget)}/день · внесено уже {fmt(progress.totalEntered)}
+              {fmt(liveDailyTarget)}/день сейчас · внесено уже {fmt(progress.totalEntered)}
             </div>
           </>
         ) : (
@@ -89,7 +91,7 @@ export default function KassaTab({ showToast, budgetState }: { showToast: ShowTo
             {days.map((d) => {
               // Fill height is capped at 100% so the square never overflows,
               // but the displayed number keeps going past it on overshoot.
-              const rawPct = progress.dailyTarget > 0 ? (d.dayTotal / progress.dailyTarget) * 100 : 0;
+              const rawPct = d.dayTarget > 0 ? (d.dayTotal / d.dayTarget) * 100 : d.dayTotal > 0 ? 100 : 0;
               const fillPct = Math.min(100, rawPct);
               const dayDone = rawPct >= 100;
               return (

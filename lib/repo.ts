@@ -320,11 +320,15 @@ export async function completeOnboarding(userId: string, input: OnboardingInput)
 
 export async function updateGoal(
   userId: string,
-  input: { name: string; target: number; saved: number; deadlineDate: string }
+  input: { name: string; target: number; saved: number; deadlineDate: string; isNewMoney?: boolean }
 ) {
   await withTransaction(async (client) => {
-    const existing = await client.query("select id from goals where user_id = $1 and is_active limit 1", [userId]);
+    const existing = await client.query(
+      "select id, saved_amount from goals where user_id = $1 and is_active limit 1",
+      [userId]
+    );
     const iso = ddmmyyyyToIso(input.deadlineDate);
+    const oldSaved = existing.rows[0] ? Number(existing.rows[0].saved_amount) : 0;
     if (existing.rows.length === 0) {
       await client.query(
         `insert into goals (user_id, name, target_amount, saved_amount, deadline_date, is_active)
@@ -336,6 +340,23 @@ export async function updateGoal(
         "update goals set name = $2, target_amount = $3, saved_amount = $4, deadline_date = $5 where id = $1",
         [existing.rows[0].id, input.name, input.target, input.saved, iso]
       );
+    }
+
+    // A manual "Уже накоплено всего" edit defaults to a bookkeeping
+    // correction (e.g. recording money saved before the app was used) —
+    // it must not eat into this week's spendable balance. Bump the current
+    // week's snapshot by the same delta so committedThisWeek() nets to zero
+    // for it. Only an explicit "this is new money set aside this week" opt-in
+    // (isNewMoney) skips this and lets the edit count as a real contribution.
+    if (!input.isNewMoney) {
+      const delta = input.saved - oldSaved;
+      if (delta !== 0) {
+        await client.query(
+          `update weekly_incomes set goal_saved_at_week_start = goal_saved_at_week_start + $2
+           where user_id = $1 and week_start_date = (select max(week_start_date) from weekly_incomes where user_id = $1)`,
+          [userId, delta]
+        );
+      }
     }
   });
 }
@@ -477,9 +498,17 @@ export async function updateFloor(userId: string, value: number) {
 
 export async function updateReserve(
   userId: string,
-  input: { pct: number; saved: number; withdraw: number | null }
+  input: { pct: number; saved: number; withdraw: number | null; isNewMoney?: boolean }
 ) {
   await withTransaction(async (client) => {
+    const existing = await client.query("select saved_amount from reserve_fund where user_id = $1", [userId]);
+    const oldSaved = existing.rows[0] ? Number(existing.rows[0].saved_amount) : 0;
+    // Only the manual-edit portion of the change is a candidate for the
+    // "correction, doesn't affect this week" treatment below — a withdraw is
+    // always a real event (money leaving the reserve back into spendable
+    // cash) and should keep counting normally.
+    const manualDelta = input.saved - oldSaved;
+
     let saved = input.saved;
     if (input.withdraw && input.withdraw > 0) {
       saved = Math.max(0, saved - input.withdraw);
@@ -493,6 +522,14 @@ export async function updateReserve(
        on conflict (user_id) do update set saved_amount = $2, pct = $3`,
       [userId, saved, input.pct]
     );
+
+    if (!input.isNewMoney && manualDelta !== 0) {
+      await client.query(
+        `update weekly_incomes set reserve_saved_at_week_start = reserve_saved_at_week_start + $2
+         where user_id = $1 and week_start_date = (select max(week_start_date) from weekly_incomes where user_id = $1)`,
+        [userId, manualDelta]
+      );
+    }
   });
 }
 
