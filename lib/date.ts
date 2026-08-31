@@ -1,0 +1,85 @@
+// Date helpers ported 1:1 from the prototype. Dates are stored/passed around
+// as DD.MM.YYYY strings everywhere, exactly like the original, to keep the
+// arithmetic identical (avoids timezone surprises from ISO parsing).
+
+export function pad2(n: number) {
+  return String(n).padStart(2, "0");
+}
+
+export function toDDMMYYYY(d: Date) {
+  return `${pad2(d.getDate())}.${pad2(d.getMonth() + 1)}.${d.getFullYear()}`;
+}
+
+export function isoToDDMMYYYY(iso: string) {
+  // iso: YYYY-MM-DD (as stored in Postgres date columns / <input type=date>)
+  const [y, m, d] = iso.split("-");
+  return `${d}.${m}.${y}`;
+}
+
+export function ddmmyyyyToIso(dateStr: string) {
+  const [d, m, y] = dateStr.split(".");
+  return `${y}-${m}-${d}`;
+}
+
+export function isValidDDMMYYYY(dateStr: string) {
+  return /^\d{2}\.\d{2}\.\d{4}$/.test(dateStr);
+}
+
+export function lastFriday(now: Date = new Date()): string {
+  const d = new Date(now);
+  const day = d.getDay(); // 0=Sun..6=Sat, Friday=5
+  const diff = day >= 5 ? day - 5 : day + 2;
+  d.setDate(d.getDate() - diff);
+  return toDDMMYYYY(d);
+}
+
+export function daysUntil(dateStr: string, now: Date = new Date()): number {
+  const [d, m, y] = dateStr.split(".").map(Number);
+  const target = new Date(y, m - 1, d);
+  return Math.max(0, Math.ceil((target.getTime() - now.getTime()) / 86400000));
+}
+
+export function addDays(dateStr: string, n: number): string {
+  const [d, m, y] = dateStr.split(".").map(Number);
+  const dt = new Date(y, m - 1, d);
+  dt.setDate(dt.getDate() + n);
+  return toDDMMYYYY(dt);
+}
+
+export function daysBetween(fromStr: string, toStr: string): number {
+  const [fd, fm, fy] = fromStr.split(".").map(Number);
+  const [td, tm, ty] = toStr.split(".").map(Number);
+  const from = new Date(fy, fm - 1, fd);
+  const to = new Date(ty, tm - 1, td);
+  return Math.max(0, Math.ceil((to.getTime() - from.getTime()) / 86400000));
+}
+
+/**
+ * Weeks remaining until the goal deadline, counted from the START OF THE
+ * CURRENT WORKING WEEK (currentWeekStartDate) — NOT from today.
+ *
+ * This is a deliberate, previously-fixed bug: counting from "today" makes the
+ * "need to earn" number creep up every single day between paydays even though
+ * nothing about the plan changed. Counting from the week's own start date
+ * keeps it stable all week and only moves when a new week is fixed. Do not
+ * revert this to `daysUntil(deadline)`.
+ */
+export function weeksRemainingToGoal(currentWeekStartDate: string, deadlineDate: string | null): number {
+  if (!deadlineDate) return 1;
+  const days = daysBetween(currentWeekStartDate, deadlineDate);
+  return Math.max(1, days / 7);
+}
+
+export function dateToSortable(d: string): string {
+  const [dd, mm, yy] = d.split(".");
+  return `${yy}${mm}${dd}`;
+}
+
+const DOW_NAMES = ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"];
+export function dowName(dateStr: string): string {
+  const [d, m, y] = dateStr.split(".").map(Number);
+  const jsDay = new Date(y, m - 1, d).getDay();
+  return DOW_NAMES[(jsDay + 6) % 7];
+}
+
+export const DOW_FULL = ["Понедельник", "Вторник", "Среда", "Четверг", "Пятница", "Суббота", "Воскресенье"];
