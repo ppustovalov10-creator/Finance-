@@ -70,10 +70,10 @@ export default function KassaTab({ showToast, budgetState }: { showToast: ShowTo
       {hasKassaGoal && (
         <div className="mb-4">
           <div className="text-[11px] tracking-widest uppercase mb-1" style={{ color: "var(--muted)" }}>
-            {todayInfo?.isToday ? "Касса на сегодня" : "Касса на день"}
+            Касса: день / неделя
           </div>
-          <div className="font-display font-bold leading-none" style={{ fontSize: "clamp(36px,11vw,48px)" }}>
-            {fmt(liveDailyTarget)}
+          <div className="font-display font-bold leading-none" style={{ fontSize: "clamp(30px,9vw,40px)" }}>
+            {fmt(liveDailyTarget)} / {fmt(target.requiredKassa)}
           </div>
         </div>
       )}
@@ -83,12 +83,9 @@ export default function KassaTab({ showToast, budgetState }: { showToast: ShowTo
           Нужная касса на неделю
         </div>
         {hasKassaGoal ? (
-          <>
-            <div className="font-display font-semibold text-[26px]">{fmt(target.requiredKassa)}</div>
-            <div className="text-[12.5px] mt-1" style={{ color: "var(--muted)" }}>
-              {fmt(liveDailyTarget)}/день сейчас · внесено уже {fmt(progress.totalEntered)}
-            </div>
-          </>
+          <div className="text-[12.5px]" style={{ color: "var(--muted)" }}>
+            {fmt(liveDailyTarget)}/день сейчас · внесено уже {fmt(progress.totalEntered)}
+          </div>
         ) : (
           <div className="text-[13px]" style={{ color: "var(--muted)" }}>
             Оклад и бонусы уже покрывают цель — кассу можно не делать.
