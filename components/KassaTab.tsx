@@ -135,8 +135,10 @@ export default function KassaTab({ showToast, budgetState }: { showToast: ShowTo
                     <div className="font-display font-bold" style={{ fontSize: 12, color: dayDone ? "var(--pos)" : "var(--ink)" }}>
                       {rawPct.toFixed(0)}%
                     </div>
-                    <div style={{ fontSize: 8.5, color: "var(--muted)", marginTop: 1 }}>
-                      {Math.round(d.dayTarget).toLocaleString("ru-RU")}
+                    <div style={{ fontSize: 8.5, color: dayDone ? "var(--pos)" : "var(--muted)", marginTop: 1 }}>
+                      {d.dayTotal > 0
+                        ? Math.round(d.dayTotal).toLocaleString("ru-RU")
+                        : Math.round(d.dayTarget).toLocaleString("ru-RU")}
                     </div>
                   </div>
                 </button>
