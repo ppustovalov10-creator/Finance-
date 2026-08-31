@@ -7,9 +7,12 @@ import type { AppState } from "@/lib/types";
 import Onboarding from "./Onboarding";
 import HomeTab from "./HomeTab";
 import EnvelopesTab from "./EnvelopesTab";
+import KassaTab from "./KassaTab";
 import Toast from "./Toast";
 
-type Tab = "minimal" | "envelopes";
+type Tab = "minimal" | "envelopes" | "kassa";
+
+const TAB_LABELS: Record<Tab, string> = { minimal: "Главное", envelopes: "Конверты", kassa: "Касса" };
 
 export default function AppShell() {
   const [state, setState] = useState<AppState | null>(null);
@@ -55,17 +58,17 @@ export default function AppShell() {
         style={{ background: "var(--bg)", borderBottom: "1px solid var(--line)" }}
       >
         <div className="flex gap-1 rounded-full p-1" style={{ background: "var(--hover)", border: "1px solid var(--border)" }}>
-          {(["minimal", "envelopes"] as Tab[]).map((t) => (
+          {(["minimal", "envelopes", "kassa"] as Tab[]).map((t) => (
             <button
               key={t}
               onClick={() => setTab(t)}
-              className="border-none px-[18px] py-2 rounded-full text-[13px] font-semibold cursor-pointer transition-colors"
+              className="border-none px-[14px] py-2 rounded-full text-[13px] font-semibold cursor-pointer transition-colors"
               style={{
                 background: tab === t ? "var(--accent-blue)" : "transparent",
                 color: tab === t ? "#fff" : "var(--muted)",
               }}
             >
-              {t === "minimal" ? "Главное" : "Конверты"}
+              {TAB_LABELS[t]}
             </button>
           ))}
         </div>
@@ -78,11 +81,9 @@ export default function AppShell() {
         </button>
       </div>
 
-      {tab === "minimal" ? (
-        <HomeTab state={state} refresh={refresh} showToast={showToast} />
-      ) : (
-        <EnvelopesTab state={state} refresh={refresh} showToast={showToast} />
-      )}
+      {tab === "minimal" && <HomeTab state={state} refresh={refresh} showToast={showToast} />}
+      {tab === "envelopes" && <EnvelopesTab state={state} refresh={refresh} showToast={showToast} />}
+      {tab === "kassa" && <KassaTab showToast={showToast} />}
 
       {toast && <Toast text={toast.text} isError={toast.isError} />}
     </div>

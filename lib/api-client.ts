@@ -1,4 +1,5 @@
 import type { AppState } from "./types";
+import type { KassaState, KassaCalcResult } from "./kassa";
 
 export class ApiError extends Error {}
 
@@ -45,4 +46,24 @@ export const api = {
     income: number;
   }) => call("/api/onboarding", "POST", b),
   onboardingSkip: () => call("/api/onboarding", "POST", { skip: true }),
+
+  getKassaState: () => call<KassaState>("/api/kassa/state", "GET"),
+  setSalesTarget: (b: {
+    targetSalary: number;
+    failedPlan: boolean;
+    opsTotal: number;
+    opsPlan: number;
+    mgrTotal: number;
+    mgrPlan: number;
+    choice?: "A" | "B";
+  }) => call<{ needsChoice: true; result: KassaCalcResult } | { needsChoice: false; requiredKassa: number }>(
+    "/api/kassa/target",
+    "POST",
+    b
+  ),
+  addKassaEntry: (b: { amount: number; dateStr: string }) =>
+    call<{ id: string }>("/api/kassa/entries", "POST", b),
+  updateKassaEntry: (id: string, b: { amount: number; dateStr: string }) =>
+    call(`/api/kassa/entries/${id}`, "PUT", b),
+  deleteKassaEntry: (id: string) => call(`/api/kassa/entries/${id}`, "DELETE"),
 };

@@ -104,3 +104,29 @@ create table if not exists reserve_log (
   created_at timestamptz not null default now()
 );
 create index if not exists reserve_log_user_idx on reserve_log(user_id, created_at);
+
+-- "Касса" tab: a personal weekly sales-commission target, entirely separate
+-- from the budget tab's income/goal tracking.
+create table if not exists sales_target (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references users(id) on delete cascade,
+  week_start_date date not null,
+  target_salary numeric not null,
+  failed_plan boolean not null default false,
+  ops_total int not null default 0,
+  ops_plan int not null default 0,
+  mgr_total int not null default 0,
+  mgr_plan int not null default 0,
+  required_kassa numeric not null,
+  created_at timestamptz not null default now(),
+  unique (user_id, week_start_date)
+);
+
+create table if not exists kassa_entries (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references users(id) on delete cascade,
+  date date not null,
+  amount numeric not null,
+  created_at timestamptz not null default now()
+);
+create index if not exists kassa_entries_user_date_idx on kassa_entries(user_id, date);
