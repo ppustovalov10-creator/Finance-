@@ -199,10 +199,9 @@ function isWeekend(dateStr: string): boolean {
 }
 
 /**
- * The app's "current week" runs Friday through Thursday (see lastFriday() in
- * lib/date.ts), which contains exactly 5 non-weekend dates: the starting
- * Friday itself, then Monday through Thursday. Those are the 5 working days
- * the weekly kassa target is paced against.
+ * Kassa's week runs Monday through Sunday (see lastMonday() in lib/date.ts —
+ * a new work week, and a new target, always starts on Monday). Filtering out
+ * the weekend leaves exactly Mon-Fri, in that order.
  */
 export function workingDaysOfWeek(weekStartDate: string): string[] {
   const days: string[] = [];

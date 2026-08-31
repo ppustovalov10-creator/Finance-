@@ -33,6 +33,16 @@ export function lastFriday(now: Date = new Date()): string {
   return toDDMMYYYY(d);
 }
 
+/** Start of the current Mon-Sun work week (used by the Kassa tab — its own,
+ * separate week concept from the budget tab's Friday-anchored payday week). */
+export function lastMonday(now: Date = new Date()): string {
+  const d = new Date(now);
+  const day = d.getDay(); // 0=Sun..6=Sat, Monday=1
+  const diff = day === 0 ? 6 : day - 1;
+  d.setDate(d.getDate() - diff);
+  return toDDMMYYYY(d);
+}
+
 export function daysUntil(dateStr: string, now: Date = new Date()): number {
   const [d, m, y] = dateStr.split(".").map(Number);
   const target = new Date(y, m - 1, d);

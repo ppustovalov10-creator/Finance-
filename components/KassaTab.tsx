@@ -87,8 +87,11 @@ export default function KassaTab({ showToast, budgetState }: { showToast: ShowTo
         <>
           <div className="grid grid-cols-5 gap-1.5 mb-5">
             {days.map((d) => {
-              const dayPct = progress.dailyTarget > 0 ? Math.min(100, (d.dayTotal / progress.dailyTarget) * 100) : 0;
-              const dayDone = dayPct >= 100;
+              // Fill height is capped at 100% so the square never overflows,
+              // but the displayed number keeps going past it on overshoot.
+              const rawPct = progress.dailyTarget > 0 ? (d.dayTotal / progress.dailyTarget) * 100 : 0;
+              const fillPct = Math.min(100, rawPct);
+              const dayDone = rawPct >= 100;
               return (
                 <button
                   key={d.dateStr}
@@ -108,7 +111,7 @@ export default function KassaTab({ showToast, budgetState }: { showToast: ShowTo
                   <div
                     className="absolute inset-x-0 bottom-0"
                     style={{
-                      height: `${dayPct}%`,
+                      height: `${fillPct}%`,
                       background: dayDone ? "var(--pos)" : "var(--accent-blue)",
                       opacity: 0.3,
                       transition: "height .3s ease",
@@ -117,7 +120,7 @@ export default function KassaTab({ showToast, budgetState }: { showToast: ShowTo
                   <div className="relative z-10 text-center pb-1.5 px-0.5">
                     <div style={{ fontSize: 9.5, color: "var(--muted)" }}>{d.dow}</div>
                     <div className="font-display font-bold" style={{ fontSize: 12, color: dayDone ? "var(--pos)" : "var(--ink)" }}>
-                      {dayPct.toFixed(0)}%
+                      {rawPct.toFixed(0)}%
                     </div>
                   </div>
                 </button>
