@@ -67,31 +67,28 @@ export default function KassaTab({ showToast, budgetState }: { showToast: ShowTo
         Неделя с {state.weekStartDate}
       </div>
 
-      {hasKassaGoal && (
+      {hasKassaGoal ? (
         <div className="mb-4">
           <div className="text-[11px] tracking-widest uppercase mb-1" style={{ color: "var(--muted)" }}>
-            Касса: день / неделя
+            Касса дня
           </div>
-          <div className="font-display font-bold leading-none" style={{ fontSize: "clamp(30px,9vw,40px)" }}>
-            {fmt(liveDailyTarget)} / {fmt(target.requiredKassa)}
+          <div className="font-display font-bold leading-none mb-3" style={{ fontSize: "clamp(28px,8vw,36px)" }}>
+            {fmt(todayInfo?.dayTotal ?? 0)} / {fmt(liveDailyTarget)}
+          </div>
+          <div className="text-[11px] tracking-widest uppercase mb-1" style={{ color: "var(--muted)" }}>
+            Касса недели
+          </div>
+          <div className="font-display font-bold leading-none" style={{ fontSize: "clamp(28px,8vw,36px)" }}>
+            {fmt(progress.totalEntered)} / {fmt(target.requiredKassa)}
           </div>
         </div>
-      )}
-
-      <div className="rounded-2xl p-4 mb-4" style={{ background: "var(--hover)", border: "1px solid var(--border)" }}>
-        <div className="text-[11px] tracking-wide uppercase mb-1.5" style={{ color: "var(--muted)" }}>
-          Нужная касса на неделю
-        </div>
-        {hasKassaGoal ? (
-          <div className="text-[12.5px]" style={{ color: "var(--muted)" }}>
-            {fmt(liveDailyTarget)}/день сейчас · внесено уже {fmt(progress.totalEntered)}
-          </div>
-        ) : (
+      ) : (
+        <div className="rounded-2xl p-4 mb-4" style={{ background: "var(--hover)", border: "1px solid var(--border)" }}>
           <div className="text-[13px]" style={{ color: "var(--muted)" }}>
             Оклад и бонусы уже покрывают цель — кассу можно не делать.
           </div>
-        )}
-      </div>
+        </div>
+      )}
 
       {hasKassaGoal && (
         <>
