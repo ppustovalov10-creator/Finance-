@@ -173,6 +173,31 @@ export function spentSince(transactions: Transaction[], sinceDateStr: string): n
     .reduce((s, t) => s + Math.abs(t.amount), 0);
 }
 
+export interface CommittedThisWeek {
+  goalContribution: number;
+  reserveContribution: number;
+  total: number;
+}
+
+/**
+ * Money already committed this week via a goal contribution or the reserve
+ * auto-skim logged against the current week's start date — it's no longer
+ * spendable even though it never became a `transactions` row, so it has to
+ * come off the weekly balance the same way a spend would.
+ */
+export function committedThisWeek(state: AppState): CommittedThisWeek {
+  const weekStart = state.currentWeek.startDate;
+  const goalContribution = state.goal.log
+    .filter((l) => l.weekStart === weekStart)
+    .reduce((s, l) => s + l.actual, 0);
+  // Only positive log entries are deposits — a reserve withdrawal (negative
+  // amount) frees money back up rather than committing more of it.
+  const reserveContribution = state.reserve.log
+    .filter((l) => l.date === weekStart && l.amount > 0)
+    .reduce((s, l) => s + l.amount, 0);
+  return { goalContribution, reserveContribution, total: goalContribution + reserveContribution };
+}
+
 export function categoryTotalsThisWeek(state: AppState): Record<string, number> {
   const sortable = dateToSortable(state.currentWeek.startDate);
   const byCat: Record<string, number> = {};

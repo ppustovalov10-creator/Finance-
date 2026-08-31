@@ -5,7 +5,7 @@ import type { AppState, Transaction } from "@/lib/types";
 import { weeklyCapsOf } from "@/lib/types";
 import { addDays, daysUntil, DOW_FULL } from "@/lib/date";
 import { fmt } from "@/lib/format";
-import { calcWeeklyTarget, calcTierCards, calcDayBreakdown, categoryTotalsThisWeek, spentSince } from "@/lib/calc";
+import { calcWeeklyTarget, calcTierCards, calcDayBreakdown, categoryTotalsThisWeek, spentSince, committedThisWeek } from "@/lib/calc";
 import { iconKeyFor } from "@/lib/categories";
 import { IconBadge, InlineIcon } from "./Icon";
 import InfoModal from "./InfoModal";
@@ -27,6 +27,7 @@ export default function HomeTab({ state, refresh, showToast }: { state: AppState
   const nextFriday = addDays(week.startDate, 7);
   const daysLeft = daysUntil(nextFriday, now);
   const spent = spentSince(state.transactions, week.startDate);
+  const committed = committedThisWeek(state);
   const caps = weeklyCapsOf(state.envelopes);
 
   const targetInfo = calcWeeklyTarget(state);
@@ -65,7 +66,7 @@ export default function HomeTab({ state, refresh, showToast }: { state: AppState
   }
 
   const hasIncome = week.income != null;
-  const remaining = hasIncome ? (week.income as number) + (week.carryIn || 0) - spent : 0;
+  const remaining = hasIncome ? (week.income as number) + (week.carryIn || 0) - spent - committed.total : 0;
   const perDay = hasIncome ? (daysLeft > 0 ? remaining / daysLeft : remaining) : 0;
 
   const byCat = categoryTotalsThisWeek(state);
@@ -104,7 +105,7 @@ export default function HomeTab({ state, refresh, showToast }: { state: AppState
         </div>
         <div className="text-[13px] mt-2" style={{ color: "var(--muted)" }}>
           {hasIncome
-            ? `${fmt(week.income as number)} дохода${week.carryIn ? ` ${week.carryIn > 0 ? "+" : "−"} ${fmt(Math.abs(week.carryIn))} остаток` : ""} − ${fmt(spent)} трат = ${fmt(remaining)}, ÷ ${daysLeft} дн. до ${nextFriday}`
+            ? `${fmt(week.income as number)} дохода${week.carryIn ? ` ${week.carryIn > 0 ? "+" : "−"} ${fmt(Math.abs(week.carryIn))} остаток` : ""} − ${fmt(spent)} трат${committed.total > 0 ? ` − ${fmt(committed.total)} взносы (цель+подушка)` : ""} = ${fmt(remaining)}, ÷ ${daysLeft} дн. до ${nextFriday}`
             : `Ещё не знаю твой доход с ${week.startDate} — нажми «Зафиксировать доход» ниже.`}
         </div>
       </div>
