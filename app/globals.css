@@ -1,0 +1,61 @@
+@import "tailwindcss";
+
+/* The prototype always forces the dark palette (`document.body.className =
+   'theme-dark'` on every render) regardless of the unused light theme CSS —
+   so the production app ships that single dark theme as its real design,
+   not a toggle. */
+:root {
+  --bg: #0e0f0c;
+  --ink: #f5f3ec;
+  --muted: #8a8b7e;
+  --accent: #6fcf7b;
+  --accent-blue: #2f6fed;
+  --danger: #e8735f;
+  --card: #f5f3ec;
+  --line: rgba(245, 243, 236, 0.08);
+  --panel: #1a1c15;
+  --border: rgba(245, 243, 236, 0.12);
+  --pos: #6fcf7b;
+  --hover: rgba(245, 243, 236, 0.05);
+
+  --sheet-bg: #f5f3ec;
+  --sheet-ink: #15170f;
+  --sheet-line: rgba(21, 23, 15, 0.08);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-inter), sans-serif;
+}
+
+.font-display {
+  font-family: var(--font-fraunces), serif;
+}
+
+.font-mono-num {
+  font-family: var(--font-plex-mono), monospace;
+}
+
+input,
+select,
+textarea,
+button {
+  font-family: inherit;
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 999px;
+}
