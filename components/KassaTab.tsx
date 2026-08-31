@@ -67,6 +67,17 @@ export default function KassaTab({ showToast, budgetState }: { showToast: ShowTo
         Неделя с {state.weekStartDate}
       </div>
 
+      {hasKassaGoal && (
+        <div className="mb-4">
+          <div className="text-[11px] tracking-widest uppercase mb-1" style={{ color: "var(--muted)" }}>
+            {todayInfo?.isToday ? "Касса на сегодня" : "Касса на день"}
+          </div>
+          <div className="font-display font-bold leading-none" style={{ fontSize: "clamp(36px,11vw,48px)" }}>
+            {fmt(liveDailyTarget)}
+          </div>
+        </div>
+      )}
+
       <div className="rounded-2xl p-4 mb-4" style={{ background: "var(--hover)", border: "1px solid var(--border)" }}>
         <div className="text-[11px] tracking-wide uppercase mb-1.5" style={{ color: "var(--muted)" }}>
           Нужная касса на неделю
@@ -229,29 +240,30 @@ export default function KassaTab({ showToast, budgetState }: { showToast: ShowTo
                 {d.comment}
               </div>
             )}
-            {!d.isFuture &&
-              (d.dayEntries.length === 0 ? (
+            {d.dayEntries.length === 0 ? (
+              !d.isFuture && (
                 <div className="text-[11.5px] py-1" style={{ color: "var(--muted)" }}>
                   Касса не внесена
                 </div>
-              ) : (
-                d.dayEntries.map((e) => (
-                  <div
-                    key={e.id}
-                    onClick={() => {
-                      setEditEntry(e);
-                      setEntryModalOpen(true);
-                    }}
-                    className="flex justify-between py-1.5 cursor-pointer"
-                    style={{ borderBottom: "1px solid var(--line)", fontSize: "12.5px" }}
-                  >
-                    <span>Касса</span>
-                    <span className="font-display" style={{ color: "var(--pos)" }}>
-                      {fmt(e.amount)}
-                    </span>
-                  </div>
-                ))
-              ))}
+              )
+            ) : (
+              d.dayEntries.map((e) => (
+                <div
+                  key={e.id}
+                  onClick={() => {
+                    setEditEntry(e);
+                    setEntryModalOpen(true);
+                  }}
+                  className="flex justify-between py-1.5 cursor-pointer"
+                  style={{ borderBottom: "1px solid var(--line)", fontSize: "12.5px" }}
+                >
+                  <span>Касса</span>
+                  <span className="font-display" style={{ color: "var(--pos)" }}>
+                    {fmt(e.amount)}
+                  </span>
+                </div>
+              ))
+            )}
           </div>
         ))}
       </div>
