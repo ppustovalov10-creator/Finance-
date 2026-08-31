@@ -29,7 +29,8 @@ export async function getAppState(userId: string): Promise<AppState> {
     pool.query("select saved_amount, pct from reserve_fund where user_id = $1", [userId]),
     pool.query("select date, amount from reserve_log where user_id = $1 order by created_at asc", [userId]),
     pool.query(
-      "select week_start_date, income, carry_in from weekly_incomes where user_id = $1 order by week_start_date asc",
+      `select week_start_date, income, carry_in, goal_saved_at_week_start, reserve_saved_at_week_start
+       from weekly_incomes where user_id = $1 order by week_start_date asc`,
       [userId]
     ),
     pool.query(
@@ -61,10 +62,15 @@ export async function getAppState(userId: string): Promise<AppState> {
     carryIn: Number(r.carry_in),
   }));
 
+  const lastIncomeRow = incomeRes.rows[incomeRes.rows.length - 1];
   const currentWeek =
     incomeLog.length > 0
-      ? incomeLog[incomeLog.length - 1]
-      : { startDate: lastFriday(), income: null, carryIn: 0 };
+      ? {
+          ...incomeLog[incomeLog.length - 1],
+          goalSavedAtWeekStart: Number(lastIncomeRow.goal_saved_at_week_start),
+          reserveSavedAtWeekStart: Number(lastIncomeRow.reserve_saved_at_week_start),
+        }
+      : { startDate: lastFriday(), income: null, carryIn: 0, goalSavedAtWeekStart: 0, reserveSavedAtWeekStart: 0 };
 
   let goal;
   if (goalRes.rows[0]) {
@@ -191,11 +197,16 @@ export async function fixWeeklyIncome(userId: string, input: FixIncomeInput) {
           weeksRemainingToGoal(state.currentWeek.startDate, state.goal.deadlineDate)
         : 0;
 
+    // Snapshot goal.saved / reserve.saved as they stood right before this
+    // fixation — only takes effect on the first fixation of this week; a
+    // correction to an already-fixed week leaves the original snapshot
+    // alone (it's excluded from the ON CONFLICT update).
     await client.query(
-      `insert into weekly_incomes (user_id, week_start_date, income, carry_in)
-       values ($1, $2, $3, $4)
+      `insert into weekly_incomes
+         (user_id, week_start_date, income, carry_in, goal_saved_at_week_start, reserve_saved_at_week_start)
+       values ($1, $2, $3, $4, $5, $6)
        on conflict (user_id, week_start_date) do update set income = $3, carry_in = $4`,
-      [userId, iso, input.incomeVal, input.carryInVal]
+      [userId, iso, input.incomeVal, input.carryInVal, state.goal.saved, state.reserve.saved]
     );
 
     await recalcCapsFromIncome(client, userId, input.incomeVal, true);
@@ -275,9 +286,12 @@ export async function completeOnboarding(userId: string, input: OnboardingInput)
     }
 
     const iso = ddmmyyyyToIso(input.weekDate);
+    // Onboarding always creates the goal at saved=0 and reserve starts at 0
+    // too, so the pre-fixation snapshot for this very first week is 0/0.
     await client.query(
-      `insert into weekly_incomes (user_id, week_start_date, income, carry_in)
-       values ($1, $2, $3, 0)
+      `insert into weekly_incomes
+         (user_id, week_start_date, income, carry_in, goal_saved_at_week_start, reserve_saved_at_week_start)
+       values ($1, $2, $3, 0, 0, 0)
        on conflict (user_id, week_start_date) do update set income = $3, carry_in = 0`,
       [userId, iso, input.income]
     );

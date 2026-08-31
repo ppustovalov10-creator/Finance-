@@ -186,15 +186,13 @@ export interface CommittedThisWeek {
  * come off the weekly balance the same way a spend would.
  */
 export function committedThisWeek(state: AppState): CommittedThisWeek {
-  const weekStart = state.currentWeek.startDate;
-  const goalContribution = state.goal.log
-    .filter((l) => l.weekStart === weekStart)
-    .reduce((s, l) => s + l.actual, 0);
-  // Only positive log entries are deposits — a reserve withdrawal (negative
-  // amount) frees money back up rather than committing more of it.
-  const reserveContribution = state.reserve.log
-    .filter((l) => l.date === weekStart && l.amount > 0)
-    .reduce((s, l) => s + l.amount, 0);
+  // Delta since the snapshot taken when this week was fixed — catches money
+  // committed to the goal or reserve however it got there: the
+  // income-fixation flow's own contribution field, the reserve auto-skim,
+  // or a manual edit via "Изменить цель" / "Подушка безопасности" that
+  // never touches goal_log/reserve_log at all.
+  const goalContribution = state.goal.saved - state.currentWeek.goalSavedAtWeekStart;
+  const reserveContribution = state.reserve.saved - state.currentWeek.reserveSavedAtWeekStart;
   return { goalContribution, reserveContribution, total: goalContribution + reserveContribution };
 }
 

@@ -24,6 +24,12 @@ create table if not exists weekly_incomes (
   week_start_date date not null,
   income numeric not null,
   carry_in numeric not null default 0,
+  -- Snapshots of goal.saved / reserve.saved at the moment this week was
+  -- fixed, before that fixation's own contribution/skim applied. Lets the
+  -- app show how much of the week's money is already committed (via any
+  -- mechanism, including a manual "edit goal" bump) rather than spendable.
+  goal_saved_at_week_start numeric not null default 0,
+  reserve_saved_at_week_start numeric not null default 0,
   created_at timestamptz not null default now(),
   unique (user_id, week_start_date)
 );
