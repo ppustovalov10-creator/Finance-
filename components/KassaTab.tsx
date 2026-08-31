@@ -105,7 +105,7 @@ export default function KassaTab({ showToast, budgetState }: { showToast: ShowTo
                   }}
                   className="relative rounded-xl overflow-hidden cursor-pointer flex flex-col items-center justify-end"
                   style={{
-                    height: 68,
+                    height: 80,
                     border: d.isToday ? "1.5px solid var(--accent-blue)" : "1px solid var(--border)",
                     background: "var(--hover)",
                   }}
@@ -123,6 +123,9 @@ export default function KassaTab({ showToast, budgetState }: { showToast: ShowTo
                     <div style={{ fontSize: 9.5, color: "var(--muted)" }}>{d.dow}</div>
                     <div className="font-display font-bold" style={{ fontSize: 12, color: dayDone ? "var(--pos)" : "var(--ink)" }}>
                       {rawPct.toFixed(0)}%
+                    </div>
+                    <div style={{ fontSize: 8.5, color: "var(--muted)", marginTop: 1 }}>
+                      {Math.round(d.dayTarget).toLocaleString("ru-RU")}
                     </div>
                   </div>
                 </button>
