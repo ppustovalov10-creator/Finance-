@@ -162,6 +162,36 @@ export interface KassaState {
   entries: KassaEntry[];
 }
 
+export interface KassaProgress {
+  totalEntered: number;
+  dailyTarget: number;
+  kassaPct: number; // entered / required kassa
+  currentSalary: number; // salary the entered kassa would actually produce
+  salaryPct: number; // currentSalary / target salary
+}
+
+/**
+ * Two parallel percentages: how much of the required *kassa* has been
+ * entered, and — since salary isn't linear in kassa (the commission rate
+ * jumps at tier boundaries) — how much of the target *salary* that kassa
+ * would actually produce right now.
+ */
+export function progressForTarget(target: SalesTarget, entries: KassaEntry[]): KassaProgress {
+  const totalEntered = entries.reduce((s, e) => s + e.amount, 0);
+  const dailyTarget = target.requiredKassa / 5;
+  const kassaPct = target.requiredKassa > 0 ? (totalEntered / target.requiredKassa) * 100 : 0;
+  const { baseSalary, opBonus, mgrBonus } = computeBonuses({
+    failedPlan: target.failedPlan,
+    opsTotal: target.opsTotal,
+    opsPlan: target.opsPlan,
+    mgrTotal: target.mgrTotal,
+    mgrPlan: target.mgrPlan,
+  });
+  const currentSalary = salaryForKassa(totalEntered, baseSalary, opBonus, mgrBonus);
+  const salaryPct = target.targetSalary > 0 ? (currentSalary / target.targetSalary) * 100 : 0;
+  return { totalEntered, dailyTarget, kassaPct, currentSalary, salaryPct };
+}
+
 function isWeekend(dateStr: string): boolean {
   const [d, m, y] = dateStr.split(".").map(Number);
   const jsDay = new Date(y, m - 1, d).getDay(); // 0=Sun..6=Sat

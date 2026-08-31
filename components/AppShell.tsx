@@ -83,7 +83,7 @@ export default function AppShell() {
 
       {tab === "minimal" && <HomeTab state={state} refresh={refresh} showToast={showToast} />}
       {tab === "envelopes" && <EnvelopesTab state={state} refresh={refresh} showToast={showToast} />}
-      {tab === "kassa" && <KassaTab showToast={showToast} />}
+      {tab === "kassa" && <KassaTab showToast={showToast} budgetState={state} />}
 
       {toast && <Toast text={toast.text} isError={toast.isError} />}
     </div>

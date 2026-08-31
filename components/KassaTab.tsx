@@ -3,14 +3,15 @@
 import { useCallback, useEffect, useState } from "react";
 import { api } from "@/lib/api-client";
 import type { KassaState, KassaEntry } from "@/lib/kassa";
-import { calcKassaDayBreakdown } from "@/lib/kassa";
+import { calcKassaDayBreakdown, progressForTarget } from "@/lib/kassa";
 import { fmt } from "@/lib/format";
+import type { AppState } from "@/lib/types";
 import { KassaTargetForm } from "./KassaTargetForm";
 import { KassaEntryModal } from "./KassaEntryModal";
 import { Sheet, SheetTitle } from "./Sheet";
 import type { ShowToast } from "./AppShell";
 
-export default function KassaTab({ showToast }: { showToast: ShowToast }) {
+export default function KassaTab({ showToast, budgetState }: { showToast: ShowToast; budgetState: AppState | null }) {
   const [state, setState] = useState<KassaState | null>(null);
   const [editTargetOpen, setEditTargetOpen] = useState(false);
   const [entryModalOpen, setEntryModalOpen] = useState(false);
@@ -45,19 +46,17 @@ export default function KassaTab({ showToast }: { showToast: ShowToast }) {
           Личная цель по кассе на неделю — не связана с бюджетными вкладками.
         </div>
         <div className="rounded-2xl p-4" style={{ background: "var(--hover)", border: "1px solid var(--border)" }}>
-          <KassaTargetForm onSaved={refresh} />
+          <KassaTargetForm budgetState={budgetState} onSaved={refresh} />
         </div>
       </div>
     );
   }
 
   const target = state.target;
-  const totalEntered = state.entries.reduce((s, e) => s + e.amount, 0);
+  const progress = progressForTarget(target, state.entries);
   const hasKassaGoal = target.requiredKassa > 0;
-  const pct = hasKassaGoal ? (totalEntered / target.requiredKassa) * 100 : 0;
-  const over = hasKassaGoal && totalEntered > target.requiredKassa;
-  const dailyTarget = target.requiredKassa / 5;
-  const days = calcKassaDayBreakdown(state.weekStartDate, state.entries, dailyTarget);
+  const over = hasKassaGoal && progress.totalEntered > target.requiredKassa;
+  const days = calcKassaDayBreakdown(state.weekStartDate, state.entries, progress.dailyTarget);
 
   return (
     <div className="max-w-[420px] mx-auto px-5 pt-6 pb-[100px]">
@@ -74,7 +73,7 @@ export default function KassaTab({ showToast }: { showToast: ShowToast }) {
           <>
             <div className="font-display font-semibold text-[26px]">{fmt(target.requiredKassa)}</div>
             <div className="text-[12.5px] mt-1" style={{ color: "var(--muted)" }}>
-              {fmt(dailyTarget)}/день · внесено уже {fmt(totalEntered)}
+              {fmt(progress.dailyTarget)}/день · внесено уже {fmt(progress.totalEntered)}
             </div>
           </>
         ) : (
@@ -86,6 +85,46 @@ export default function KassaTab({ showToast }: { showToast: ShowToast }) {
 
       {hasKassaGoal && (
         <>
+          <div className="grid grid-cols-5 gap-1.5 mb-5">
+            {days.map((d) => {
+              const dayPct = progress.dailyTarget > 0 ? Math.min(100, (d.dayTotal / progress.dailyTarget) * 100) : 0;
+              const dayDone = dayPct >= 100;
+              return (
+                <button
+                  key={d.dateStr}
+                  type="button"
+                  onClick={() => {
+                    setEntryModalDate(d.dateStr);
+                    setEditEntry(null);
+                    setEntryModalOpen(true);
+                  }}
+                  className="relative rounded-xl overflow-hidden cursor-pointer flex flex-col items-center justify-end"
+                  style={{
+                    height: 68,
+                    border: d.isToday ? "1.5px solid var(--accent-blue)" : "1px solid var(--border)",
+                    background: "var(--hover)",
+                  }}
+                >
+                  <div
+                    className="absolute inset-x-0 bottom-0"
+                    style={{
+                      height: `${dayPct}%`,
+                      background: dayDone ? "var(--pos)" : "var(--accent-blue)",
+                      opacity: 0.3,
+                      transition: "height .3s ease",
+                    }}
+                  />
+                  <div className="relative z-10 text-center pb-1.5 px-0.5">
+                    <div style={{ fontSize: 9.5, color: "var(--muted)" }}>{d.dow}</div>
+                    <div className="font-display font-bold" style={{ fontSize: 12, color: dayDone ? "var(--pos)" : "var(--ink)" }}>
+                      {dayPct.toFixed(0)}%
+                    </div>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+
           <div className="text-[11px] tracking-widest uppercase mb-1.5" style={{ color: "var(--muted)" }}>
             Выполнение кассы
           </div>
@@ -94,24 +133,42 @@ export default function KassaTab({ showToast }: { showToast: ShowToast }) {
               className="font-display font-bold leading-none"
               style={{ fontSize: "clamp(40px,13vw,56px)", color: over ? "var(--pos)" : "var(--ink)" }}
             >
-              {pct.toFixed(0)}%
+              {progress.kassaPct.toFixed(0)}%
             </div>
           </div>
           <div className="h-2.5 rounded-full mb-1.5 overflow-hidden" style={{ background: "var(--border)" }}>
             <div
               className="h-full rounded-full"
               style={{
-                width: `${Math.min(100, pct)}%`,
+                width: `${Math.min(100, progress.kassaPct)}%`,
                 background: over ? "var(--pos)" : "var(--accent-blue)",
               }}
             />
           </div>
           {over && (
-            <div className="text-[12.5px] font-semibold mb-5" style={{ color: "var(--pos)" }}>
-              Касса перевыполнена на {fmt(totalEntered - target.requiredKassa)}
+            <div className="text-[12.5px] font-semibold mb-4" style={{ color: "var(--pos)" }}>
+              Касса перевыполнена на {fmt(progress.totalEntered - target.requiredKassa)}
             </div>
           )}
-          {!over && <div className="mb-5" />}
+          {!over && <div className="mb-4" />}
+
+          <div className="rounded-2xl p-3.5 mb-5" style={{ background: "var(--hover)", border: "1px solid var(--border)" }}>
+            <div className="flex justify-between items-baseline mb-1.5">
+              <div className="text-[11px] tracking-wide uppercase" style={{ color: "var(--muted)" }}>
+                Прогресс к зарплате
+              </div>
+              <div className="font-display font-semibold text-[15px]">{progress.salaryPct.toFixed(0)}%</div>
+            </div>
+            <div className="h-1.5 rounded-full mb-1.5 overflow-hidden" style={{ background: "var(--border)" }}>
+              <div
+                className="h-full rounded-full"
+                style={{ width: `${Math.min(100, progress.salaryPct)}%`, background: "var(--accent, #6FCF7B)" }}
+              />
+            </div>
+            <div className="text-[11.5px]" style={{ color: "var(--muted)" }}>
+              Сейчас вышло бы ~{fmt(progress.currentSalary)} из {fmt(target.targetSalary)}
+            </div>
+          </div>
         </>
       )}
 
@@ -208,6 +265,7 @@ export default function KassaTab({ showToast }: { showToast: ShowToast }) {
         <div className="mt-2">
           <KassaTargetForm
             key={editTargetOpen ? "open" : "closed"}
+            budgetState={budgetState}
             initial={{
               targetSalary: target.targetSalary,
               failedPlan: target.failedPlan,
