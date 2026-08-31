@@ -68,20 +68,27 @@ export default function KassaTab({ showToast, budgetState }: { showToast: ShowTo
       </div>
 
       {hasKassaGoal ? (
-        <div className="mb-4">
-          <div className="text-[11px] tracking-widest uppercase mb-1" style={{ color: "var(--muted)" }}>
-            Касса дня
-          </div>
-          <div className="font-display font-bold leading-none mb-3" style={{ fontSize: "clamp(28px,8vw,36px)" }}>
-            {fmt(todayInfo?.dayTotal ?? 0)} / {fmt(liveDailyTarget)}
-          </div>
-          <div className="text-[11px] tracking-widest uppercase mb-1" style={{ color: "var(--muted)" }}>
-            Касса недели
-          </div>
-          <div className="font-display font-bold leading-none" style={{ fontSize: "clamp(28px,8vw,36px)" }}>
-            {fmt(progress.totalEntered)} / {fmt(target.requiredKassa)}
-          </div>
-        </div>
+        (() => {
+          const dayEntered = todayInfo?.dayTotal ?? 0;
+          const dayDone = liveDailyTarget > 0 ? dayEntered >= liveDailyTarget : dayEntered > 0;
+          return (
+            <div className="mb-5">
+              <div className="text-[11px] tracking-widest uppercase mb-1" style={{ color: "var(--muted)" }}>
+                Касса дня
+              </div>
+              <div className="font-display font-bold leading-none mb-5" style={{ fontSize: "clamp(32px,9vw,42px)" }}>
+                <span style={{ color: dayDone ? "var(--pos)" : "var(--ink)" }}>{fmt(dayEntered)}</span>
+                <span style={{ color: "var(--muted)" }}> / {fmt(liveDailyTarget)}</span>
+              </div>
+              <div className="text-[11px] tracking-widest uppercase mb-1" style={{ color: "var(--muted)" }}>
+                Касса недели
+              </div>
+              <div className="font-display font-semibold leading-none" style={{ fontSize: "clamp(20px,6vw,26px)" }}>
+                {fmt(progress.totalEntered)} / {fmt(target.requiredKassa)}
+              </div>
+            </div>
+          );
+        })()
       ) : (
         <div className="rounded-2xl p-4 mb-4" style={{ background: "var(--hover)", border: "1px solid var(--border)" }}>
           <div className="text-[13px]" style={{ color: "var(--muted)" }}>
