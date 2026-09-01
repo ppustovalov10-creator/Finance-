@@ -131,28 +131,39 @@ export function GoalEditModal({ show, onClose, state, refresh }: ModalBaseProps)
       <FieldLabel>Уже накоплено всего</FieldLabel>
       <DescInput type="number" placeholder="₽" value={saved} onChange={(e) => setSaved(e.target.value)} />
       {savedChanged && (
-        <label
-          style={{
-            display: "flex",
-            alignItems: "flex-start",
-            gap: 8,
-            fontSize: 12,
-            color: "#332B1E",
-            margin: "-8px 0 14px",
-            cursor: "pointer",
-          }}
-        >
-          <input
-            type="checkbox"
-            checked={isNewMoney}
-            onChange={(e) => setIsNewMoney(e.target.checked)}
-            style={{ marginTop: 2 }}
-          />
-          <span>
-            Это новые деньги, отложенные на этой неделе (уменьшит баланс недели). Если не отмечено — считаем, что это
-            просто поправка суммы (например, деньги, отложенные ещё до приложения), баланс недели не трогаем.
-          </span>
-        </label>
+        <div className="mb-3.5">
+          <div style={{ fontSize: 11.5, color: "#8A8B7E", marginBottom: 6 }}>Откуда эта сумма?</div>
+          <button
+            type="button"
+            onClick={() => setIsNewMoney(false)}
+            className="w-full text-left px-3.5 py-2.5 rounded-xl mb-2 cursor-pointer"
+            style={{
+              border: !isNewMoney ? "2px solid var(--accent-blue, #2F6FED)" : "1.5px solid #E5DCC5",
+              background: !isNewMoney ? "rgba(47,111,237,0.08)" : "#fff",
+            }}
+          >
+            <div style={{ fontWeight: 700, fontSize: 13, color: "#332B1E" }}>
+              {!isNewMoney ? "✓ " : ""}Деньги уже были — это просто поправка суммы
+            </div>
+            <div style={{ fontSize: 11.5, color: "#8A8B7E", marginTop: 2 }}>
+              Например, отложено ещё до приложения. Баланс недели не тронем.
+            </div>
+          </button>
+          <button
+            type="button"
+            onClick={() => setIsNewMoney(true)}
+            className="w-full text-left px-3.5 py-2.5 rounded-xl cursor-pointer"
+            style={{
+              border: isNewMoney ? "2px solid var(--accent-blue, #2F6FED)" : "1.5px solid #E5DCC5",
+              background: isNewMoney ? "rgba(47,111,237,0.08)" : "#fff",
+            }}
+          >
+            <div style={{ fontWeight: 700, fontSize: 13, color: "#332B1E" }}>
+              {isNewMoney ? "✓ " : ""}Отложил новые деньги на этой неделе
+            </div>
+            <div style={{ fontSize: 11.5, color: "#8A8B7E", marginTop: 2 }}>Уменьшит баланс недели.</div>
+          </button>
+        </div>
       )}
       <FieldLabel>Дедлайн</FieldLabel>
       <DescInput placeholder="ДД.ММ.ГГГГ" value={deadline} onChange={(e) => setDeadline(e.target.value)} />
@@ -245,28 +256,37 @@ export function ReserveEditModal({ show, onClose, state, refresh }: ModalBasePro
       <FieldLabel>Накоплено сейчас (поправить вручную)</FieldLabel>
       <DescInput type="number" value={saved} onChange={(e) => setSaved(e.target.value)} />
       {savedChanged && (
-        <label
-          style={{
-            display: "flex",
-            alignItems: "flex-start",
-            gap: 8,
-            fontSize: 12,
-            color: "#332B1E",
-            margin: "-8px 0 14px",
-            cursor: "pointer",
-          }}
-        >
-          <input
-            type="checkbox"
-            checked={isNewMoney}
-            onChange={(e) => setIsNewMoney(e.target.checked)}
-            style={{ marginTop: 2 }}
-          />
-          <span>
-            Это новые деньги, отложенные на этой неделе (уменьшит баланс недели). Если не отмечено — считаем, что это
-            просто поправка суммы, баланс недели не трогаем.
-          </span>
-        </label>
+        <div className="mb-3.5">
+          <div style={{ fontSize: 11.5, color: "#8A8B7E", marginBottom: 6 }}>Откуда эта сумма?</div>
+          <button
+            type="button"
+            onClick={() => setIsNewMoney(false)}
+            className="w-full text-left px-3.5 py-2.5 rounded-xl mb-2 cursor-pointer"
+            style={{
+              border: !isNewMoney ? "2px solid var(--accent-blue, #2F6FED)" : "1.5px solid #E5DCC5",
+              background: !isNewMoney ? "rgba(47,111,237,0.08)" : "#fff",
+            }}
+          >
+            <div style={{ fontWeight: 700, fontSize: 13, color: "#332B1E" }}>
+              {!isNewMoney ? "✓ " : ""}Деньги уже были — это просто поправка суммы
+            </div>
+            <div style={{ fontSize: 11.5, color: "#8A8B7E", marginTop: 2 }}>Баланс недели не тронем.</div>
+          </button>
+          <button
+            type="button"
+            onClick={() => setIsNewMoney(true)}
+            className="w-full text-left px-3.5 py-2.5 rounded-xl cursor-pointer"
+            style={{
+              border: isNewMoney ? "2px solid var(--accent-blue, #2F6FED)" : "1.5px solid #E5DCC5",
+              background: isNewMoney ? "rgba(47,111,237,0.08)" : "#fff",
+            }}
+          >
+            <div style={{ fontWeight: 700, fontSize: 13, color: "#332B1E" }}>
+              {isNewMoney ? "✓ " : ""}Отложил новые деньги на этой неделе
+            </div>
+            <div style={{ fontSize: 11.5, color: "#8A8B7E", marginTop: 2 }}>Уменьшит баланс недели.</div>
+          </button>
+        </div>
       )}
       <FieldLabel>Использовать из подушки сейчас (форс-мажор)</FieldLabel>
       <DescInput type="number" placeholder="сумма, ₽ — необязательно" value={withdraw} onChange={(e) => setWithdraw(e.target.value)} />
