@@ -109,7 +109,8 @@ export default function AchievementsScreen({ onClose }: { onClose: () => void })
                           return (
                             <>
                               <div style={{ color: "var(--pos)", fontWeight: 700 }}>{d.title}</div>
-                              <div>Получено {fmtDate(unlockedAt)}</div>
+                              <div>{d.description}</div>
+                              <div className="mt-1">Получено {fmtDate(unlockedAt)}</div>
                             </>
                           );
                         }
@@ -156,8 +157,13 @@ export default function AchievementsScreen({ onClose }: { onClose: () => void })
                         <div style={{ fontSize: 22 }}>{d.icon}</div>
                         <div className="text-[12px] font-semibold mt-1">{d.title}</div>
                         <div className="text-[10.5px] mt-0.5" style={{ color: "var(--muted)" }}>
-                          {unlockedAt ? fmtDate(unlockedAt) : d.description}
+                          {d.description}
                         </div>
+                        {unlockedAt && (
+                          <div className="text-[10.5px] mt-1" style={{ color: "var(--pos)" }}>
+                            Получено {fmtDate(unlockedAt)}
+                          </div>
+                        )}
                       </div>
                     );
                   })}
