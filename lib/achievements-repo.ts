@@ -62,6 +62,28 @@ function consecutiveStreak(weekStartDatesDesc: string[]): number {
   return streak;
 }
 
+// Longest run of consecutive (7-day-step) weeks ANYWHERE in the history,
+// not just the one trailing the most recent entry. Unlock checks use this
+// — an achievement earned via a streak that happened at some point stays
+// earned even after a later gap breaks it (achievements never get
+// revoked), and this is also what makes a backfill/reconcile pass correct
+// for a user who already had a qualifying streak before this feature, or
+// before any given tier existed, even if their live streak has since
+// dropped. The *trailing* streak (consecutiveStreak above) is still what's
+// shown as "current progress" toward a tier not yet reached.
+function maxConsecutiveStreak(weekStartDates: string[]): number {
+  if (weekStartDates.length === 0) return 0;
+  const sorted = [...weekStartDates].sort((a, b) => (dateToSortable(a) < dateToSortable(b) ? -1 : 1));
+  let best = 1;
+  let current = 1;
+  for (let i = 1; i < sorted.length; i++) {
+    if (addDays(sorted[i - 1], 7) === sorted[i]) current++;
+    else current = 1;
+    best = Math.max(best, current);
+  }
+  return best;
+}
+
 function mondayOf(dateStr: string): string {
   const [d, m, y] = dateStr.split(".").map(Number);
   const jsDate = new Date(y, m - 1, d);
@@ -79,12 +101,16 @@ export async function checkIncomeAchievements(db: Queryable, userId: string): Pr
   const rows = res.rows.map((r) => ({ weekStartDate: isoToDDMMYYYY(r.week_start_date), income: Number(r.income) }));
   if (rows.length === 0) return [];
 
-  const streak = consecutiveStreak([...rows].reverse().map((r) => r.weekStartDate));
-  const growthPct = rows[0].income > 0 ? ((rows[rows.length - 1].income - rows[0].income) / rows[0].income) * 100 : 0;
+  const bestStreak = maxConsecutiveStreak(rows.map((r) => r.weekStartDate));
+  // Best-ever growth vs the very first recorded week, not just the latest
+  // week — same reasoning as the streak above: a peak that already
+  // happened stays earned even if income has since come back down.
+  const firstIncome = rows[0].income;
+  const bestGrowthPct = firstIncome > 0 ? Math.max(0, ...rows.map((r) => ((r.income - firstIncome) / firstIncome) * 100)) : 0;
 
   return [
-    ...(await unlockTiers(db, userId, "discipline", streak, DISCIPLINE_THRESHOLDS)),
-    ...(await unlockTiers(db, userId, "income_growth", growthPct, GROWTH_THRESHOLDS)),
+    ...(await unlockTiers(db, userId, "discipline", bestStreak, DISCIPLINE_THRESHOLDS)),
+    ...(await unlockTiers(db, userId, "income_growth", bestGrowthPct, GROWTH_THRESHOLDS)),
   ];
 }
 
@@ -207,14 +233,25 @@ export async function checkKassaAchievements(db: Queryable, userId: string): Pro
 
   const out: UnlockedAchievement[] = [];
 
-  // Path 2: streak of consecutive met weeks, ending at the most recent one
-  let streak = 0;
-  for (let i = 0; i < weeklyStatus.length; i++) {
-    if (!weeklyStatus[i].met) break;
-    if (i > 0 && addDays(weeklyStatus[i - 1].weekStartDate, -7) !== weeklyStatus[i].weekStartDate) break;
-    streak++;
+  // Path 2: longest-ever run of consecutive met weeks anywhere in the
+  // history (same reasoning as maxConsecutiveStreak above) — a streak
+  // that already happened stays earned even after a later gap or miss.
+  let bestKassaStreak = 0;
+  let kassaRun = 0;
+  let prevWeekDate: string | null = null;
+  for (const w of [...weeklyStatus].reverse()) {
+    // ascending order
+    if (w.met && prevWeekDate !== null && addDays(prevWeekDate, 7) === w.weekStartDate) {
+      kassaRun++;
+    } else if (w.met) {
+      kassaRun = 1;
+    } else {
+      kassaRun = 0;
+    }
+    bestKassaStreak = Math.max(bestKassaStreak, kassaRun);
+    prevWeekDate = w.weekStartDate;
   }
-  out.push(...(await unlockTiers(db, userId, "kassa_streak", streak, KASSA_STREAK_THRESHOLDS)));
+  out.push(...(await unlockTiers(db, userId, "kassa_streak", bestKassaStreak, KASSA_STREAK_THRESHOLDS)));
 
   const cutoffSortable = dateToSortable(addDays(lastMonday(), -(KASSA_STREAK_TIER4_WINDOW - 1) * 7));
   const metInWindow = weeklyStatus.filter((w) => w.met && dateToSortable(w.weekStartDate) >= cutoffSortable).length;
