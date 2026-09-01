@@ -229,15 +229,19 @@ export interface KassaDayInfo {
  * over the remaining working days — not a fixed 1/5th of the weekly goal.
  *
  * A closed day (strictly before today) keeps whatever target it actually
- * had, computed the same rolling way, one day at a time. Today's own target
- * is likewise fixed by what's happened on earlier closed days — it doesn't
- * shift under its own entries while the day is still open. But every day
- * *after* today shares one live number: what's left once today's current,
- * still-changing total is counted too, spread evenly over the days after
- * it. So more entered today immediately lowers tomorrow onward, and less
- * immediately raises it — without waiting for today to close, and without
- * each later day compounding an ever-worse guess about the days between now
- * and then.
+ * had, computed the same rolling way, one day at a time. Today and every
+ * day after it share one live number: what's left once all closed days are
+ * accounted for, spread evenly across today plus the days still to come.
+ * That number only moves when a day actually closes — it does NOT shrink
+ * further just because today, still in progress, hasn't reached it yet.
+ *
+ * That's deliberate: if today's own still-changing total were subtracted
+ * out of the pool for tomorrow-onward (as an earlier version did), the
+ * closed-days total plus every remaining day's target would stop summing to
+ * the weekly requiredKassa the moment today had anything less than its own
+ * target sitting in it — i.e. almost all day, every day — which read as the
+ * app silently dropping a day's result. Keeping one shared number for
+ * today+future guarantees that sum always equals requiredKassa exactly.
  */
 export function calcKassaDayBreakdown(
   weekStartDate: string,
@@ -252,28 +256,26 @@ export function calcKassaDayBreakdown(
 
   const dayTotals = workDays.map((dateStr) => entries.filter((e) => e.date === dateStr).reduce((s, e) => s + e.amount, 0));
 
-  let pastEntered = 0;
-  let todayEntered = 0;
-  let todayIdx = -1;
+  let closedEntered = 0;
+  let closedCount = 0;
   workDays.forEach((dateStr, idx) => {
     if (dateToSortable(dateStr) < todaySortable) {
-      pastEntered += dayTotals[idx];
-    } else if (dateStr === todayStr) {
-      todayEntered = dayTotals[idx];
-      todayIdx = idx;
+      closedCount = idx + 1;
+      closedEntered += dayTotals[idx];
     }
   });
-  const daysAfterToday = todayIdx === -1 ? 0 : totalDays - todayIdx - 1;
-  const futureTarget = daysAfterToday > 0 ? Math.max(0, (requiredKassa - pastEntered - todayEntered) / daysAfterToday) : 0;
+  const remainingFromToday = Math.max(1, totalDays - closedCount);
+  const liveTarget = Math.max(0, (requiredKassa - closedEntered) / remainingFromToday);
 
   let enteredBefore = 0;
   return workDays.map((dateStr, idx) => {
     const isFuture = dateToSortable(dateStr) > todaySortable;
     const isToday = dateStr === todayStr;
+    const isClosed = dateToSortable(dateStr) < todaySortable;
     const dayTotal = dayTotals[idx];
     const dayEntries = entries.filter((e) => e.date === dateStr);
 
-    const dayTarget = isFuture ? futureTarget : Math.max(0, (requiredKassa - enteredBefore) / (totalDays - idx));
+    const dayTarget = isClosed ? Math.max(0, (requiredKassa - enteredBefore) / (totalDays - idx)) : liveTarget;
 
     let comment = "";
     let commentClass: "" | "ok" | "warn" = "";
@@ -285,8 +287,8 @@ export function calcKassaDayBreakdown(
         comment = `Отстаёшь на ${fmt(dayTarget - dayTotal)}, остаток перейдёт на оставшиеся дни.`;
         commentClass = "warn";
       }
-      enteredBefore += dayTotal;
     }
+    if (isClosed) enteredBefore += dayTotal;
 
     return { dateStr, dow: dowName(dateStr), isToday, isFuture, dayTotal, dayEntries, dayTarget, comment, commentClass };
   });
