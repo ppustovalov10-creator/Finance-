@@ -10,7 +10,7 @@ export const POST = withUser(async (userId, req) => {
   const body = await readJson<Body>(req);
   const keyword = (body.keyword || "").trim().toLowerCase();
   if (!keyword || !body.category) throw new Error("Пустое слово");
-  await addKeyword(userId, body.category, keyword);
+  return addKeyword(userId, body.category, keyword);
 });
 
 export const DELETE = withUser(async (userId, req) => {

@@ -90,15 +90,17 @@ export function IncomeSetupModal({ show, onClose, state, refresh }: ModalBasePro
 }
 
 export function GoalEditModal({ show, onClose, state, refresh }: ModalBaseProps) {
+  const isCompleted = state.goal.target > 0 && state.goal.saved >= state.goal.target;
   const [name, setName] = useState(state.goal.name);
   const [target, setTarget] = useState(state.goal.target ? String(state.goal.target) : "");
   const [saved, setSaved] = useState(String(state.goal.saved || 0));
   const [deadline, setDeadline] = useState(state.goal.deadlineDate || "");
   const [isNewMoney, setIsNewMoney] = useState(false);
+  const [startNew, setStartNew] = useState(isCompleted);
   const [err, setErr] = useState("");
   const [busy, setBusy] = useState(false);
 
-  const savedChanged = parseFloat(saved) !== (state.goal.saved || 0);
+  const savedChanged = startNew || parseFloat(saved) !== (state.goal.saved || 0);
 
   async function save() {
     setErr("");
@@ -111,7 +113,14 @@ export function GoalEditModal({ show, onClose, state, refresh }: ModalBaseProps)
     if (!isValidDDMMYYYY(deadline)) return setErr("Дедлайн в формате ДД.ММ.ГГГГ, например 09.10.2026");
     setBusy(true);
     try {
-      await api.updateGoal({ name: nameTrim, target: targetVal, saved: savedVal, deadlineDate: deadline, isNewMoney });
+      await api.updateGoal({
+        name: nameTrim,
+        target: targetVal,
+        saved: savedVal,
+        deadlineDate: deadline,
+        isNewMoney,
+        startNew: isCompleted ? startNew : false,
+      });
       await refresh();
       onClose();
     } catch (e) {
@@ -124,6 +133,55 @@ export function GoalEditModal({ show, onClose, state, refresh }: ModalBaseProps)
   return (
     <Sheet show={show} onClose={onClose}>
       <SheetTitle>Редактировать цель</SheetTitle>
+      {isCompleted && (
+        <div
+          className="mb-3.5 px-3.5 py-2.5 rounded-xl"
+          style={{ background: "rgba(111,207,123,0.14)", border: "1px solid rgba(111,207,123,0.35)" }}
+        >
+          <div style={{ fontWeight: 700, fontSize: 13, color: "#332B1E" }}>🎉 Цель «{state.goal.name}» достигнута!</div>
+          <button
+            type="button"
+            onClick={() => {
+              setStartNew(true);
+              setName("");
+              setTarget("");
+              setSaved("0");
+              setDeadline("");
+            }}
+            className="w-full text-left px-3 py-2 rounded-lg mt-2 cursor-pointer"
+            style={{
+              border: startNew ? "2px solid var(--accent-blue, #2F6FED)" : "1.5px solid #E5DCC5",
+              background: startNew ? "rgba(47,111,237,0.08)" : "#fff",
+            }}
+          >
+            <div style={{ fontWeight: 700, fontSize: 12.5, color: "#332B1E" }}>{startNew ? "✓ " : ""}Начать новую цель</div>
+            {startNew && (
+              <div style={{ fontSize: 11, color: "#8A8B7E", marginTop: 2, fontWeight: 400 }}>
+                Заполни название, сумму и дедлайн новой цели ниже
+              </div>
+            )}
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setStartNew(false);
+              setName(state.goal.name);
+              setTarget(String(state.goal.target));
+              setSaved(String(state.goal.saved || 0));
+              setDeadline(state.goal.deadlineDate || "");
+            }}
+            className="w-full text-left px-3 py-2 rounded-lg mt-1.5 cursor-pointer"
+            style={{
+              border: !startNew ? "2px solid var(--accent-blue, #2F6FED)" : "1.5px solid #E5DCC5",
+              background: !startNew ? "rgba(47,111,237,0.08)" : "#fff",
+            }}
+          >
+            <div style={{ fontWeight: 700, fontSize: 12.5, color: "#332B1E" }}>
+              {!startNew ? "✓ " : ""}Нет, просто поправить эту же цель
+            </div>
+          </button>
+        </div>
+      )}
       <FieldLabel>Название</FieldLabel>
       <DescInput placeholder="например, Macbook" value={name} onChange={(e) => setName(e.target.value)} />
       <FieldLabel>Целевая сумма</FieldLabel>

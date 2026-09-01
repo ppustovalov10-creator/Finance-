@@ -13,7 +13,7 @@ export const POST = withUser(async (userId, req) => {
   const body = await readJson<Body>(req);
   if (!isValidDDMMYYYY(body.dateVal)) throw new Error("Дата должна быть в формате ДД.ММ.ГГГГ");
   if (!body.incomeVal || body.incomeVal <= 0) throw new Error("Укажи доход больше нуля");
-  await fixWeeklyIncome(userId, {
+  return fixWeeklyIncome(userId, {
     dateVal: body.dateVal,
     incomeVal: body.incomeVal,
     carryInVal: body.carryInVal || 0,

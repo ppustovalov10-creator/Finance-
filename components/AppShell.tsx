@@ -2,12 +2,13 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { signOut } from "next-auth/react";
-import { api } from "@/lib/api-client";
+import { api, onNewAchievements, type NewAchievement } from "@/lib/api-client";
 import type { AppState } from "@/lib/types";
 import Onboarding from "./Onboarding";
 import HomeTab from "./HomeTab";
 import EnvelopesTab from "./EnvelopesTab";
 import KassaTab from "./KassaTab";
+import AchievementsScreen from "./AchievementsScreen";
 import Toast from "./Toast";
 
 type Tab = "minimal" | "envelopes" | "kassa";
@@ -19,6 +20,8 @@ export default function AppShell() {
   const [tab, setTab] = useState<Tab>("minimal");
   const [toast, setToast] = useState<{ text: string; isError?: boolean } | null>(null);
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [achievementsOpen, setAchievementsOpen] = useState(false);
+  const achievementQueue = useRef<NewAchievement[]>([]);
 
   const refresh = useCallback(async () => {
     const s = await api.getState();
@@ -38,6 +41,23 @@ export default function AppShell() {
     setToast({ text, isError });
     toastTimer.current = setTimeout(() => setToast(null), isError ? 3200 : 2200);
   }, []);
+
+  useEffect(() => {
+    // Any API call anywhere in the app can come back with newly-unlocked
+    // achievements (see lib/api-client.ts) — queue them here so several
+    // unlocked at once still show one at a time, unobtrusively.
+    const showNext = () => {
+      const next = achievementQueue.current.shift();
+      if (!next) return;
+      showToast(`${next.icon} Новое достижение: ${next.title}`);
+      if (achievementQueue.current.length > 0) setTimeout(showNext, 2600);
+    };
+    onNewAchievements((list) => {
+      const wasEmpty = achievementQueue.current.length === 0;
+      achievementQueue.current.push(...list);
+      if (wasEmpty) showNext();
+    });
+  }, [showToast]);
 
   if (!state) {
     return (
@@ -73,6 +93,14 @@ export default function AppShell() {
           ))}
         </div>
         <button
+          onClick={() => setAchievementsOpen(true)}
+          className="absolute left-4 text-lg cursor-pointer bg-transparent border-none leading-none"
+          style={{ color: "var(--muted)" }}
+          title="Достижения"
+        >
+          🏆
+        </button>
+        <button
           onClick={() => signOut({ callbackUrl: "/login" })}
           className="absolute right-4 text-xs cursor-pointer bg-transparent border-none"
           style={{ color: "var(--muted)" }}
@@ -84,6 +112,8 @@ export default function AppShell() {
       {tab === "minimal" && <HomeTab state={state} refresh={refresh} showToast={showToast} />}
       {tab === "envelopes" && <EnvelopesTab state={state} refresh={refresh} showToast={showToast} />}
       {tab === "kassa" && <KassaTab showToast={showToast} budgetState={state} />}
+
+      {achievementsOpen && <AchievementsScreen onClose={() => setAchievementsOpen(false)} />}
 
       {toast && <Toast text={toast.text} isError={toast.isError} />}
     </div>

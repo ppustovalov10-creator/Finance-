@@ -2,6 +2,7 @@ import { pool } from "./db";
 import { isoToDDMMYYYY, ddmmyyyyToIso, lastMonday, addDays } from "./date";
 import { computeRequiredKassa, resolveRequiredKassa, type TeamInputs } from "./kassa";
 import type { KassaState, SalesTarget, KassaEntry } from "./kassa";
+import { checkKassaAchievements } from "./achievements-repo";
 
 export async function getKassaState(userId: string): Promise<KassaState> {
   const weekStartDate = lastMonday();
@@ -102,7 +103,8 @@ export async function addKassaEntry(userId: string, amount: number, dateStr: str
     ddmmyyyyToIso(dateStr),
     amount,
   ]);
-  return { id: res.rows[0].id as string };
+  const newAchievements = await checkKassaAchievements(pool, userId);
+  return { id: res.rows[0].id as string, newAchievements };
 }
 
 export async function updateKassaEntry(userId: string, id: string, amount: number, dateStr: string) {
@@ -112,6 +114,8 @@ export async function updateKassaEntry(userId: string, id: string, amount: numbe
     amount,
     ddmmyyyyToIso(dateStr),
   ]);
+  const newAchievements = await checkKassaAchievements(pool, userId);
+  return { newAchievements };
 }
 
 export async function deleteKassaEntry(userId: string, id: string) {

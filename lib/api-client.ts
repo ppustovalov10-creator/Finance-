@@ -1,7 +1,24 @@
 import type { AppState } from "./types";
 import type { KassaState, KassaCalcResult } from "./kassa";
+import type { AchievementDef } from "./achievements-data";
 
 export class ApiError extends Error {}
+
+export interface NewAchievement {
+  key: string;
+  title: string;
+  icon: string;
+}
+
+// Any API response can carry a `newAchievements` array (set server-side by
+// whichever mutation just unlocked something) — call() surfaces those to a
+// single listener rather than threading the field through every route's
+// return type, so any part of the UI can trigger a toast without its own
+// plumbing.
+let achievementListener: ((list: NewAchievement[]) => void) | null = null;
+export function onNewAchievements(cb: (list: NewAchievement[]) => void) {
+  achievementListener = cb;
+}
 
 async function call<T>(url: string, method: string, body?: unknown): Promise<T> {
   const res = await fetch(url, {
@@ -11,6 +28,9 @@ async function call<T>(url: string, method: string, body?: unknown): Promise<T> 
   });
   const data = await res.json().catch(() => ({}));
   if (!res.ok) throw new ApiError(data.error || "Что-то пошло не так");
+  if (Array.isArray(data?.newAchievements) && data.newAchievements.length > 0) {
+    achievementListener?.(data.newAchievements);
+  }
   return data as T;
 }
 
@@ -18,7 +38,7 @@ export const api = {
   getState: () => call<AppState>("/api/state", "GET"),
   fixIncome: (b: { dateVal: string; incomeVal: number; carryInVal: number; goalSavedVal: number }) =>
     call("/api/income", "POST", b),
-  updateGoal: (b: { name: string; target: number; saved: number; deadlineDate: string; isNewMoney?: boolean }) =>
+  updateGoal: (b: { name: string; target: number; saved: number; deadlineDate: string; isNewMoney?: boolean; startNew?: boolean }) =>
     call("/api/goal", "PUT", b),
   addTransaction: (b: { amount: number; desc: string; dateStr: string }) =>
     call<{ id: string; cat: string }>("/api/transactions", "POST", b),
@@ -66,4 +86,15 @@ export const api = {
   updateKassaEntry: (id: string, b: { amount: number; dateStr: string }) =>
     call(`/api/kassa/entries/${id}`, "PUT", b),
   deleteKassaEntry: (id: string) => call(`/api/kassa/entries/${id}`, "DELETE"),
+
+  getAchievements: () =>
+    call<{
+      achievements: AchievementDef[];
+      unlockedCount: number;
+      totalCount: number;
+      unlocked: Record<string, string>;
+      pathProgress: Record<string, number>;
+      kassaMetInWindow: number;
+      goalsClosedInWindow: number;
+    }>("/api/achievements", "GET"),
 };

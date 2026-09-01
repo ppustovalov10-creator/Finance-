@@ -4,6 +4,23 @@ import { isoToDDMMYYYY, ddmmyyyyToIso, lastFriday } from "./date";
 import { categorize, extractKeyword } from "./categorize";
 import type { AppState, Envelope, GoalLogEntry, IncomeLogEntry, ReserveLogEntry, Transaction } from "./types";
 import { weeksRemainingToGoal } from "./date";
+import {
+  checkIncomeAchievements,
+  checkReserveAchievements,
+  checkGoalAchievements,
+  checkTransactionAchievements,
+  checkKeywordAchievements,
+  type UnlockedAchievement,
+} from "./achievements-repo";
+export type { UnlockedAchievement };
+
+/** Stamps completed_at the first time a goal's saved amount reaches its
+ * target — idempotent, never overwrites an already-set completion. */
+async function maybeCompleteGoal(client: DbClient, goalId: string, saved: number, target: number) {
+  if (target > 0 && saved >= target) {
+    await client.query("update goals set completed_at = now() where id = $1 and completed_at is null", [goalId]);
+  }
+}
 
 async function loadEnvelopes(userId: string): Promise<Envelope[]> {
   const res = await pool.query(
@@ -247,7 +264,15 @@ export async function fixWeeklyIncome(userId: string, input: FixIncomeInput) {
          )`,
         [state.goal.id]
       );
+      await maybeCompleteGoal(client, state.goal.id, state.goal.saved + input.goalSavedVal, state.goal.target);
     }
+
+    const newAchievements: UnlockedAchievement[] = [
+      ...(await checkIncomeAchievements(client, userId)),
+      ...(await checkReserveAchievements(client, userId)),
+      ...(input.goalSavedVal > 0 ? await checkGoalAchievements(client, userId) : []),
+    ];
+    return { newAchievements };
   });
 }
 
@@ -315,31 +340,52 @@ export async function completeOnboarding(userId: string, input: OnboardingInput)
        on conflict (user_id) do update set onboarded = true`,
       [userId]
     );
+
+    await checkIncomeAchievements(client, userId);
+    await checkReserveAchievements(client, userId);
+    await checkGoalAchievements(client, userId);
   });
 }
 
 export async function updateGoal(
   userId: string,
-  input: { name: string; target: number; saved: number; deadlineDate: string; isNewMoney?: boolean }
+  input: { name: string; target: number; saved: number; deadlineDate: string; isNewMoney?: boolean; startNew?: boolean }
 ) {
-  await withTransaction(async (client) => {
+  return withTransaction(async (client) => {
     const existing = await client.query(
       "select id, saved_amount from goals where user_id = $1 and is_active limit 1",
       [userId]
     );
     const iso = ddmmyyyyToIso(input.deadlineDate);
-    const oldSaved = existing.rows[0] ? Number(existing.rows[0].saved_amount) : 0;
+    let goalId: string;
+    let oldSaved: number;
     if (existing.rows.length === 0) {
-      await client.query(
+      const ins = await client.query(
         `insert into goals (user_id, name, target_amount, saved_amount, deadline_date, is_active)
-         values ($1, $2, $3, $4, $5, true)`,
+         values ($1, $2, $3, $4, $5, true) returning id`,
         [userId, input.name, input.target, input.saved, iso]
       );
+      goalId = ins.rows[0].id;
+      oldSaved = 0;
+    } else if (input.startNew) {
+      // A completed goal only ever gets replaced explicitly — never
+      // inferred from an ordinary edit — so archive the old one and start
+      // a fresh row rather than overwriting it in place.
+      await client.query("update goals set is_active = false where id = $1", [existing.rows[0].id]);
+      const ins = await client.query(
+        `insert into goals (user_id, name, target_amount, saved_amount, deadline_date, is_active)
+         values ($1, $2, $3, $4, $5, true) returning id`,
+        [userId, input.name, input.target, input.saved, iso]
+      );
+      goalId = ins.rows[0].id;
+      oldSaved = 0;
     } else {
       await client.query(
         "update goals set name = $2, target_amount = $3, saved_amount = $4, deadline_date = $5 where id = $1",
         [existing.rows[0].id, input.name, input.target, input.saved, iso]
       );
+      goalId = existing.rows[0].id;
+      oldSaved = Number(existing.rows[0].saved_amount);
     }
 
     // A manual "Уже накоплено всего" edit defaults to a bookkeeping
@@ -358,6 +404,10 @@ export async function updateGoal(
         );
       }
     }
+
+    await maybeCompleteGoal(client, goalId, input.saved, input.target);
+    const newAchievements = await checkGoalAchievements(client, userId);
+    return { newAchievements };
   });
 }
 
@@ -373,7 +423,8 @@ export async function addTransaction(
      values ($1, $2, $3, $4, $5) returning id`,
     [userId, iso, cat, input.desc || "без описания", -Math.abs(input.amount)]
   );
-  return { id: res.rows[0].id as string, cat };
+  const newAchievements = await checkTransactionAchievements(pool, userId, false);
+  return { id: res.rows[0].id as string, cat, newAchievements };
 }
 
 export async function updateTransaction(
@@ -385,8 +436,9 @@ export async function updateTransaction(
     txId,
     userId,
   ]);
-  if (existing.rows.length === 0) return { learned: null as string | null };
+  if (existing.rows.length === 0) return { learned: null as string | null, newAchievements: [] as UnlockedAchievement[] };
   const oldCat = existing.rows[0].category as string;
+  const categoryEdited = input.cat !== oldCat;
 
   const iso = ddmmyyyyToIso(input.dateStr);
   await pool.query(
@@ -395,7 +447,8 @@ export async function updateTransaction(
   );
 
   let learned: string | null = null;
-  if (input.cat !== oldCat && input.remember) {
+  let keywordAchievements: UnlockedAchievement[] = [];
+  if (categoryEdited && input.remember) {
     const kw = extractKeyword(input.desc);
     if (kw) {
       await pool.query(
@@ -404,9 +457,11 @@ export async function updateTransaction(
         [userId, input.cat, kw]
       );
       learned = kw;
+      keywordAchievements = await checkKeywordAchievements(pool, userId);
     }
   }
-  return { learned };
+  const txAchievements = await checkTransactionAchievements(pool, userId, categoryEdited);
+  return { learned, newAchievements: [...txAchievements, ...keywordAchievements] };
 }
 
 export async function deleteTransaction(userId: string, txId: string) {
@@ -478,6 +533,8 @@ export async function addKeyword(userId: string, category: string, keyword: stri
      on conflict (user_id, category_name, keyword) do nothing`,
     [userId, category, keyword.trim().toLowerCase()]
   );
+  const newAchievements = await checkKeywordAchievements(pool, userId);
+  return { newAchievements };
 }
 
 export async function removeKeyword(userId: string, category: string, keyword: string) {
@@ -500,7 +557,7 @@ export async function updateReserve(
   userId: string,
   input: { pct: number; saved: number; withdraw: number | null; isNewMoney?: boolean }
 ) {
-  await withTransaction(async (client) => {
+  return withTransaction(async (client) => {
     const existing = await client.query("select saved_amount from reserve_fund where user_id = $1", [userId]);
     const oldSaved = existing.rows[0] ? Number(existing.rows[0].saved_amount) : 0;
     // Only the manual-edit portion of the change is a candidate for the
@@ -530,6 +587,9 @@ export async function updateReserve(
         [userId, manualDelta]
       );
     }
+
+    const newAchievements = await checkReserveAchievements(client, userId);
+    return { newAchievements };
   });
 }
 

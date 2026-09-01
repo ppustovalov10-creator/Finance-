@@ -14,7 +14,7 @@ export const PUT = withUser(async (userId, req) => {
     throw new Error("% должен быть от 0 до 100");
   }
   if (isNaN(body.saved) || body.saved < 0) throw new Error("Накоплено — число от нуля");
-  await updateReserve(userId, {
+  return updateReserve(userId, {
     pct: body.pctPercent / 100,
     saved: body.saved,
     withdraw: body.withdraw && body.withdraw > 0 ? body.withdraw : null,
