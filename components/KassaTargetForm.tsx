@@ -54,14 +54,22 @@ export function KassaTargetForm({
 
   const currentTeam: TeamInputs = { failedPlan, opsTotal, opsPlan, mgrTotal, mgrPlan };
 
-  function calc() {
+  async function calc() {
     setErr("");
     const salary = parseFloat(targetSalary);
     if (!salary || salary <= 0) {
       setErr("Укажи сумму больше нуля");
       return;
     }
-    setPreview(computeRequiredKassa(salary, currentTeam));
+    const result = computeRequiredKassa(salary, currentTeam);
+    setPreview(result);
+    // A gap between tiers always resolves to the tier above: it's never
+    // worth undershooting the plan on purpose, since the tiny extra kassa
+    // needed to clear the next tier's threshold earns strictly more salary
+    // than settling for the lower tier's max.
+    if (result.status === "gap") {
+      await save(salary, "B");
+    }
   }
 
   async function save(salaryOverride: number, choice?: "A" | "B") {
@@ -99,9 +107,7 @@ export function KassaTargetForm({
     setErr("");
     const result = computeRequiredKassa(amount, currentTeam);
     setPreview(result);
-    if (result.status !== "gap") {
-      await save(amount);
-    }
+    await save(amount, result.status === "gap" ? "B" : undefined);
   }
 
   let tierOptions: ReturnType<typeof calcTierCards> | null = null;
@@ -248,29 +254,11 @@ export function KassaTargetForm({
       )}
 
       {preview && preview.status === "gap" && (
-        <div>
-          <div className="text-sm mb-3" style={{ color: "#332B1E" }}>
-            Ровно {fmt(parseFloat(targetSalary))} на этой шкале математически недостижимо (между тарифами есть
-            скачок процента). Выбери ближайший вариант:
-          </div>
-          <button
-            type="button"
-            disabled={busy}
-            onClick={() => save(parseFloat(targetSalary), "A")}
-            className="w-full text-left px-4 py-3 rounded-xl mb-2 cursor-pointer disabled:opacity-50"
-            style={{ border: "1.5px solid #E5DCC5", background: "#fff", color: "#332B1E" }}
-          >
-            <b>Вариант А</b> — касса {fmt(preview.optionA.kassa)} → зарплата {fmt(preview.optionA.salary)}
-          </button>
-          <button
-            type="button"
-            disabled={busy}
-            onClick={() => save(parseFloat(targetSalary), "B")}
-            className="w-full text-left px-4 py-3 rounded-xl mb-3 cursor-pointer disabled:opacity-50"
-            style={{ border: "1.5px solid #E5DCC5", background: "#fff", color: "#332B1E" }}
-          >
-            <b>Вариант Б</b> — касса {fmt(preview.optionB.kassa)} → зарплата {fmt(preview.optionB.salary)}
-          </button>
+        <div className="text-sm" style={{ color: "#332B1E" }}>
+          Ровно {fmt(parseFloat(targetSalary))} на этой шкале математически недостижимо (между тарифами есть скачок
+          процента) — берём ближайший вариант сверху, чуть больше кассы ради заметно большей зарплаты: касса{" "}
+          <b>{fmt(preview.optionB.kassa)}</b> → зарплата <b>{fmt(preview.optionB.salary)}</b>.{" "}
+          {busy ? "Сохраняем…" : "Сохранено"}
         </div>
       )}
 
