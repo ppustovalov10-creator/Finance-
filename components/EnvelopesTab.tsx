@@ -40,7 +40,7 @@ export default function EnvelopesTab({ state, refresh, showToast }: { state: App
 
   async function recalc() {
     if (!week.income) {
-      setFeedback({ text: "Сначала зафиксируй доход за неделю на вкладке «Главное» — не от чего считать проценты", ok: false });
+      setFeedback({ text: "Сначала зафиксируй доход за неделю на вкладке «Доход/Касса» — не от чего считать проценты", ok: false });
       return;
     }
     setRecalcBusy(true);

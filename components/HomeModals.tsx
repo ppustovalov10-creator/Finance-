@@ -11,7 +11,7 @@ import { Sheet, FieldLabel, DescInput, AmountInput, SaveButton, CancelLink, ErrT
 import type { Refresh, ShowToast } from "./AppShell";
 
 // Each modal below is mounted with a `key` from its parent that changes every
-// time it opens (see HomeTab.tsx) — that forces a fresh remount so useState's
+// time it opens (see IncomeTab.tsx / SpendTab.tsx) — that forces a fresh remount so useState's
 // lazy initializer below always starts from the current data, with no
 // "sync state from props" useEffect needed.
 

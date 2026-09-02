@@ -4,20 +4,22 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { signOut } from "next-auth/react";
 import { api, onNewAchievements, type NewAchievement } from "@/lib/api-client";
 import type { AppState } from "@/lib/types";
+import { DOW_FULL } from "@/lib/date";
 import Onboarding from "./Onboarding";
-import HomeTab from "./HomeTab";
+import IncomeTab from "./IncomeTab";
+import SpendTab from "./SpendTab";
 import EnvelopesTab from "./EnvelopesTab";
 import KassaTab from "./KassaTab";
 import AchievementsScreen from "./AchievementsScreen";
 import Toast from "./Toast";
 
-type Tab = "minimal" | "envelopes" | "kassa";
+type Tab = "income" | "spend";
 
-const TAB_LABELS: Record<Tab, string> = { minimal: "Главное", envelopes: "Конверты", kassa: "Касса" };
+const TAB_LABELS: Record<Tab, string> = { income: "Доход/Касса", spend: "Расход" };
 
 export default function AppShell() {
   const [state, setState] = useState<AppState | null>(null);
-  const [tab, setTab] = useState<Tab>("minimal");
+  const [tab, setTab] = useState<Tab>("income");
   const [toast, setToast] = useState<{ text: string; isError?: boolean } | null>(null);
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [achievementsOpen, setAchievementsOpen] = useState(false);
@@ -71,47 +73,67 @@ export default function AppShell() {
     return <Onboarding onDone={refresh} />;
   }
 
+  const now = new Date();
+
   return (
     <div>
-      <div
-        className="sticky top-0 z-30 flex items-center justify-center py-3 px-4 relative"
-        style={{ background: "var(--bg)", borderBottom: "1px solid var(--line)" }}
-      >
-        <div className="flex gap-1 rounded-full p-1" style={{ background: "var(--hover)", border: "1px solid var(--border)" }}>
-          {(["minimal", "envelopes", "kassa"] as Tab[]).map((t) => (
-            <button
-              key={t}
-              onClick={() => setTab(t)}
-              className="border-none px-[14px] py-2 rounded-full text-[13px] font-semibold cursor-pointer transition-colors"
-              style={{
-                background: tab === t ? "var(--accent-blue)" : "transparent",
-                color: tab === t ? "#fff" : "var(--muted)",
-              }}
-            >
-              {TAB_LABELS[t]}
-            </button>
-          ))}
+      <div className="sticky top-0 z-30" style={{ background: "var(--bg)", borderBottom: "1px solid var(--line)" }}>
+        <div className="max-w-[420px] mx-auto px-5 pt-4 pb-2 flex items-start justify-between">
+          <div>
+            <div className="font-display font-bold text-2xl leading-tight" style={{ letterSpacing: "-0.01em" }}>
+              {DOW_FULL[(now.getDay() + 6) % 7]}
+            </div>
+            <div className="text-xs mt-1 uppercase tracking-wide" style={{ color: "var(--muted)" }}>
+              {`${String(now.getDate()).padStart(2, "0")}.${String(now.getMonth() + 1).padStart(2, "0")}.${now.getFullYear()}`}
+            </div>
+          </div>
+          <button
+            onClick={() => setAchievementsOpen(true)}
+            className="text-2xl cursor-pointer bg-transparent border-none leading-none"
+            style={{ color: "var(--muted)" }}
+            title="Достижения"
+          >
+            🏆
+          </button>
         </div>
-        <button
-          onClick={() => setAchievementsOpen(true)}
-          className="absolute left-4 text-lg cursor-pointer bg-transparent border-none leading-none"
-          style={{ color: "var(--muted)" }}
-          title="Достижения"
-        >
-          🏆
-        </button>
-        <button
-          onClick={() => signOut({ callbackUrl: "/login" })}
-          className="absolute right-4 text-xs cursor-pointer bg-transparent border-none"
-          style={{ color: "var(--muted)" }}
-        >
-          Выйти
-        </button>
+        <div className="flex items-center justify-center py-3 px-4 relative">
+          <div className="flex gap-1 rounded-full p-1" style={{ background: "var(--hover)", border: "1px solid var(--border)" }}>
+            {(["income", "spend"] as Tab[]).map((t) => (
+              <button
+                key={t}
+                onClick={() => setTab(t)}
+                className="border-none px-[14px] py-2 rounded-full text-[13px] font-semibold cursor-pointer transition-colors"
+                style={{
+                  background: tab === t ? "var(--accent-blue)" : "transparent",
+                  color: tab === t ? "#fff" : "var(--muted)",
+                }}
+              >
+                {TAB_LABELS[t]}
+              </button>
+            ))}
+          </div>
+          <button
+            onClick={() => signOut({ callbackUrl: "/login" })}
+            className="absolute right-4 text-xs cursor-pointer bg-transparent border-none"
+            style={{ color: "var(--muted)" }}
+          >
+            Выйти
+          </button>
+        </div>
       </div>
 
-      {tab === "minimal" && <HomeTab state={state} refresh={refresh} showToast={showToast} />}
-      {tab === "envelopes" && <EnvelopesTab state={state} refresh={refresh} showToast={showToast} />}
-      {tab === "kassa" && <KassaTab showToast={showToast} budgetState={state} />}
+      {tab === "income" && (
+        <>
+          <IncomeTab state={state} refresh={refresh} showToast={showToast} />
+          <KassaTab showToast={showToast} budgetState={state} />
+        </>
+      )}
+      {tab === "spend" && (
+        <>
+          <SpendTab state={state} refresh={refresh} showToast={showToast} />
+          <EnvelopesTab state={state} refresh={refresh} showToast={showToast} />
+        </>
+      )}
 
       {achievementsOpen && <AchievementsScreen onClose={() => setAchievementsOpen(false)} />}
 

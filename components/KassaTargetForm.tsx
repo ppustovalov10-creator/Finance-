@@ -99,8 +99,8 @@ export function KassaTargetForm({
   }
 
   // Tap a "Минималка/Средняя/Герой-красавчик" preset (same numbers already
-  // shown on "Главное") — sets the target and, unless it lands in a tariff
-  // gap (which needs a human pick), saves it immediately.
+  // shown on "Доход/Касса") — sets the target and, unless it lands in a
+  // tariff gap (which needs a human pick), saves it immediately.
   async function pickTier(key: string, amount: number) {
     setTargetSalary(String(amount));
     setPickedTierKey(key);
@@ -127,7 +127,7 @@ export function KassaTargetForm({
     <div>
       {tierOptions && tierOptions.status === "ok" && (
         <>
-          <FieldLabel first>Быстрый выбор — те же уровни, что на «Главное»</FieldLabel>
+          <FieldLabel first>Быстрый выбор — те же уровни, что выше</FieldLabel>
           <div className="grid grid-cols-3 gap-2 mb-4">
             {tierOptions.tiers.map((t) => (
               <button
