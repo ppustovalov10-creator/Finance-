@@ -8,9 +8,11 @@ import { fmt } from "@/lib/format";
 import { calcWeeklyTarget, calcDayBreakdown, categoryTotalsThisWeek, spentSince, committedThisWeek } from "@/lib/calc";
 import { iconKeyFor } from "@/lib/categories";
 import { IconBadge, InlineIcon } from "./Icon";
-import { AddTxModal, EditTxModal, ReportModal } from "./HomeModals";
-import { Card, Tag } from "./HomeCardBits";
+import { AddTxModal, EditTxModal, ReportModal, ReserveEditModal } from "./HomeModals";
+import { Card, Tag, InfoBtn } from "./HomeCardBits";
+import InfoModal from "./InfoModal";
 import type { Refresh, ShowToast } from "./AppShell";
+import { api } from "@/lib/api-client";
 
 // Everything related to spending — how much is left today, what's gone out,
 // the day-by-day pace, and adding a transaction. Конверты (envelope limits)
@@ -29,11 +31,23 @@ export default function SpendTab({ state, refresh, showToast }: { state: AppStat
   const dayBreakdownBase = week.income == null ? Object.values(caps).reduce((a, b) => a + b, 0) : targetInfo.base;
   const days = calcDayBreakdown(state, dayBreakdownBase, now);
 
-  const [detailsOpen, setDetailsOpen] = useState(false);
   const [reportModal, setReportModal] = useState(false);
   const [addTxDate, setAddTxDate] = useState<string | null>(null);
   const [addTxOpen, setAddTxOpen] = useState(false);
   const [editTx, setEditTx] = useState<Transaction | null>(null);
+  const [reserveModal, setReserveModal] = useState(false);
+  const [infoKey, setInfoKey] = useState<string | null>(null);
+  const [survivalBusy, setSurvivalBusy] = useState(false);
+
+  async function toggleSurvival() {
+    setSurvivalBusy(true);
+    try {
+      await api.setSurvival(!state.survivalMode);
+      await refresh();
+    } finally {
+      setSurvivalBusy(false);
+    }
+  }
 
   const hasIncome = week.income != null;
   const remaining = hasIncome ? (week.income as number) + (week.carryIn || 0) - spent - committed.total : 0;
@@ -63,6 +77,28 @@ export default function SpendTab({ state, refresh, showToast }: { state: AppStat
         </div>
       </div>
 
+      {state.survivalMode && (
+        <div
+          className="rounded-xl px-3.5 py-3 text-[12.5px] font-semibold mb-3"
+          style={{ background: "rgba(232,115,95,0.15)", border: "1px solid var(--danger)", color: "var(--danger)" }}
+        >
+          Режим выживания включён: не-обязательные конверты обнулены. Оставлены только еда, транспорт, жильё.
+        </div>
+      )}
+      <button
+        type="button"
+        disabled={survivalBusy}
+        onClick={toggleSurvival}
+        className="w-full py-2.5 rounded-full font-bold text-[12.5px] cursor-pointer mb-3"
+        style={{
+          border: `1.5px solid ${state.survivalMode ? "var(--danger)" : "var(--border)"}`,
+          background: state.survivalMode ? "var(--danger)" : "none",
+          color: state.survivalMode ? "#fff" : "var(--muted)",
+        }}
+      >
+        {state.survivalMode ? "Выключить режим выживания" : "Режим выживания"}
+      </button>
+
       <div className="grid grid-cols-2 gap-3 mb-3">
         <Card>
           <Tag>Потрачено с {week.startDate}</Tag>
@@ -79,41 +115,64 @@ export default function SpendTab({ state, refresh, showToast }: { state: AppStat
             </div>
           )}
         </Card>
+        <Card onClick={() => setReserveModal(true)}>
+          <Tag>
+            Подушка безопасности{" "}
+            <InfoBtn
+              onClick={(e) => {
+                e.stopPropagation();
+                setInfoKey("reserve");
+              }}
+            />
+          </Tag>
+          <div className="font-display font-semibold text-[22px]">{fmt(state.reserve.saved)}</div>
+          <div className="text-[11.5px] mt-1" style={{ color: "var(--muted)" }}>
+            {(state.reserve.pct * 100).toFixed(0)}% с каждого дохода — авто
+          </div>
+          {committed.reserveContribution > 0 && (
+            <div className="text-[11.5px] mt-1 font-semibold" style={{ color: "var(--pos)" }}>
+              +{fmt(committed.reserveContribution)} внесено на этой неделе
+            </div>
+          )}
+        </Card>
+        <Card>
+          <Tag>
+            Буфер 10% <InfoBtn onClick={() => setInfoKey("target")} />
+          </Tag>
+          <div className="font-display font-semibold text-[22px]">{fmt(targetInfo.bufferAmt)}</div>
+          <div className="text-[11.5px] mt-1" style={{ color: "var(--muted)" }}>
+            заложено в «Нужно заработать»
+          </div>
+        </Card>
       </div>
 
-      <div
-        className="text-center text-[12.5px] py-2.5 cursor-pointer select-none"
-        style={{ color: "var(--muted)" }}
-        onClick={() => setDetailsOpen((v) => !v)}
-      >
-        {detailsOpen ? "Скрыть траты недели ▴" : "Показать траты этой недели по категориям ▾"}
+      <div className="text-xs uppercase tracking-wide mt-3 mb-2.5" style={{ color: "var(--muted)" }}>
+        Потрачено на:
       </div>
-      {detailsOpen && (
-        <div className="mb-2">
-          {catList.map(([cat, amt]) => {
-            const cap = caps[cat];
-            const over = cap !== undefined && amt > cap;
-            return (
-              <div key={cat}>
-                <div className="flex items-center gap-2.5 py-2" style={{ borderBottom: "1px solid var(--line)", fontSize: "13.5px" }}>
-                  <IconBadge name={iconKeyFor(cat, state.envelopes)} />
-                  <div className="flex-1">{cat}</div>
-                  <div className="font-display font-semibold" style={{ color: over ? "var(--danger)" : "var(--muted)" }}>
-                    {fmt(amt)}
-                    {cap !== undefined ? ` / лимит ${fmt(cap)}` : ""}
-                  </div>
-                </div>
-                <div className="h-1 rounded-full mt-1.5" style={{ background: "var(--line)" }}>
-                  <div
-                    className="h-full rounded-full"
-                    style={{ width: `${Math.min(100, (amt / maxCat) * 100)}%`, opacity: 0.5, background: over ? "var(--danger)" : "var(--accent-blue)" }}
-                  />
+      <div className="mb-2">
+        {catList.map(([cat, amt]) => {
+          const cap = caps[cat];
+          const over = cap !== undefined && amt > cap;
+          return (
+            <div key={cat}>
+              <div className="flex items-center gap-2.5 py-2" style={{ borderBottom: "1px solid var(--line)", fontSize: "13.5px" }}>
+                <IconBadge name={iconKeyFor(cat, state.envelopes)} />
+                <div className="flex-1">{cat}</div>
+                <div className="font-display font-semibold" style={{ color: over ? "var(--danger)" : "var(--muted)" }}>
+                  {fmt(amt)}
+                  {cap !== undefined ? ` / лимит ${fmt(cap)}` : ""}
                 </div>
               </div>
-            );
-          })}
-        </div>
-      )}
+              <div className="h-1 rounded-full mt-1.5" style={{ background: "var(--line)" }}>
+                <div
+                  className="h-full rounded-full"
+                  style={{ width: `${Math.min(100, (amt / maxCat) * 100)}%`, opacity: 0.5, background: over ? "var(--danger)" : "var(--accent-blue)" }}
+                />
+              </div>
+            </div>
+          );
+        })}
+      </div>
 
       <div className="text-xs uppercase tracking-wide mt-6 mb-2.5" style={{ color: "var(--muted)" }}>
         По дням этой недели
@@ -211,6 +270,8 @@ export default function SpendTab({ state, refresh, showToast }: { state: AppStat
         dateOverride={addTxDate}
       />
       <EditTxModal key={editTx?.id || "edit-closed"} show={!!editTx} onClose={() => setEditTx(null)} state={state} refresh={refresh} showToast={showToast} tx={editTx} />
+      <ReserveEditModal key={reserveModal ? "reserve-open" : "reserve-closed"} show={reserveModal} onClose={() => setReserveModal(false)} state={state} refresh={refresh} showToast={showToast} />
+      <InfoModal infoKey={infoKey} onClose={() => setInfoKey(null)} />
     </div>
   );
 }

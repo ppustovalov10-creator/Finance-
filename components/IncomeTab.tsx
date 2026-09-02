@@ -6,10 +6,9 @@ import { fmt } from "@/lib/format";
 import { calcWeeklyTarget, calcTierCards } from "@/lib/calc";
 import { InlineIcon } from "./Icon";
 import InfoModal from "./InfoModal";
-import { IncomeSetupModal, GoalEditModal, FloorEditModal, ReserveEditModal } from "./HomeModals";
+import { IncomeSetupModal, GoalEditModal } from "./HomeModals";
 import { Card, Tag, InfoBtn, TargetRow } from "./HomeCardBits";
 import type { Refresh, ShowToast } from "./AppShell";
-import { api } from "@/lib/api-client";
 
 // Everything related to income — fixing the week's earnings, the goal,
 // the reserve, and how much needs to be earned — lives here. Кассa (the
@@ -34,103 +33,25 @@ export default function IncomeTab({ state, refresh, showToast }: { state: AppSta
   const [infoKey, setInfoKey] = useState<string | null>(null);
   const [incomeModal, setIncomeModal] = useState(false);
   const [goalModal, setGoalModal] = useState(false);
-  const [floorModal, setFloorModal] = useState(false);
-  const [reserveModal, setReserveModal] = useState(false);
-  const [survivalBusy, setSurvivalBusy] = useState(false);
-
-  async function toggleSurvival() {
-    setSurvivalBusy(true);
-    try {
-      await api.setSurvival(!state.survivalMode);
-      await refresh();
-    } finally {
-      setSurvivalBusy(false);
-    }
-  }
-
-  const suggestedFloorVal = state.incomeFloor;
-  const floorDisplay =
-    state.incomeFloor != null
-      ? { text: fmt(state.incomeFloor), sub: "реалистичный минимум недели" }
-      : state.incomeLog.length > 0
-        ? { text: fmt(Math.min(...state.incomeLog.map((w) => w.income))), sub: "предложение от истории — нажми, чтобы подтвердить" }
-        : { text: "—", sub: "нужно 2+ недели истории или впиши вручную" };
 
   return (
     <div className="max-w-[420px] mx-auto px-5 pt-6 pb-[40px]">
-      <Card onClick={() => setIncomeModal(true)}>
-        <Tag>Доход с {week.startDate}</Tag>
-        <div className="font-display font-semibold text-[26px]">
-          {hasIncome ? (
-            <>
-              {fmt(week.income as number)}
-              {week.carryIn ? (
-                <span className="block text-[13px] font-normal mt-0.5" style={{ color: "var(--muted)" }}>
-                  {week.carryIn > 0 ? "+" : "−"} {fmt(Math.abs(week.carryIn))} остаток
-                </span>
-              ) : null}
-            </>
-          ) : (
-            <small className="text-sm">не задан</small>
-          )}
-        </div>
-      </Card>
-
-      {state.survivalMode && (
-        <div
-          className="rounded-xl px-3.5 py-3 text-[12.5px] font-semibold mt-3 mb-1"
-          style={{ background: "rgba(232,115,95,0.15)", border: "1px solid var(--danger)", color: "var(--danger)" }}
-        >
-          Режим выживания включён: не-обязательные конверты обнулены. Оставлены только еда, транспорт, жильё.
-          Доход-пол: {suggestedFloorVal != null ? fmt(suggestedFloorVal) : floorDisplay.text}.
-        </div>
-      )}
-
-      <div className="grid grid-cols-2 gap-3 mt-3 mb-3">
-        <Card onClick={() => setFloorModal(true)}>
-          <Tag>
-            Доход-пол{" "}
-            <InfoBtn
-              onClick={(e) => {
-                e.stopPropagation();
-                setInfoKey("floor");
-              }}
-            />
-          </Tag>
-          <div className="font-display font-semibold text-[22px]">{floorDisplay.text}</div>
-          <div className="text-[11.5px] mt-1" style={{ color: "var(--muted)" }}>
-            {floorDisplay.sub}
-          </div>
-          <button
-            type="button"
-            disabled={survivalBusy}
-            onClick={(e) => {
-              e.stopPropagation();
-              toggleSurvival();
-            }}
-            className="mt-2.5 w-full py-2 rounded-[10px] font-bold text-[11.5px] cursor-pointer"
-            style={{
-              border: `1.5px solid ${state.survivalMode ? "var(--danger)" : "var(--border)"}`,
-              background: state.survivalMode ? "var(--danger)" : "none",
-              color: state.survivalMode ? "#fff" : "var(--muted)",
-            }}
-          >
-            {state.survivalMode ? "Выключить режим выживания" : "Режим выживания"}
-          </button>
-        </Card>
-        <Card onClick={() => setReserveModal(true)}>
-          <Tag>
-            Подушка безопасности{" "}
-            <InfoBtn
-              onClick={(e) => {
-                e.stopPropagation();
-                setInfoKey("reserve");
-              }}
-            />
-          </Tag>
-          <div className="font-display font-semibold text-[22px]">{fmt(state.reserve.saved)}</div>
-          <div className="text-[11.5px] mt-1" style={{ color: "var(--muted)" }}>
-            {(state.reserve.pct * 100).toFixed(0)}% с каждого дохода — авто
+      <div className="mb-3">
+        <Card onClick={() => setIncomeModal(true)}>
+          <Tag>Доход с {week.startDate}</Tag>
+          <div className="font-display font-semibold text-[26px]">
+            {hasIncome ? (
+              <>
+                {fmt(week.income as number)}
+                {week.carryIn ? (
+                  <span className="block text-[13px] font-normal mt-0.5" style={{ color: "var(--muted)" }}>
+                    {week.carryIn > 0 ? "+" : "−"} {fmt(Math.abs(week.carryIn))} остаток
+                  </span>
+                ) : null}
+              </>
+            ) : (
+              <small className="text-sm">не задан</small>
+            )}
           </div>
         </Card>
       </div>
@@ -272,8 +193,6 @@ export default function IncomeTab({ state, refresh, showToast }: { state: AppSta
 
       <IncomeSetupModal key={incomeModal ? "income-open" : "income-closed"} show={incomeModal} onClose={() => setIncomeModal(false)} state={state} refresh={refresh} showToast={showToast} />
       <GoalEditModal key={goalModal ? "goal-open" : "goal-closed"} show={goalModal} onClose={() => setGoalModal(false)} state={state} refresh={refresh} showToast={showToast} />
-      <FloorEditModal key={floorModal ? "floor-open" : "floor-closed"} show={floorModal} onClose={() => setFloorModal(false)} state={state} refresh={refresh} showToast={showToast} />
-      <ReserveEditModal key={reserveModal ? "reserve-open" : "reserve-closed"} show={reserveModal} onClose={() => setReserveModal(false)} state={state} refresh={refresh} showToast={showToast} />
       <InfoModal infoKey={infoKey} onClose={() => setInfoKey(null)} />
     </div>
   );
