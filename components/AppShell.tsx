@@ -124,8 +124,8 @@ export default function AppShell() {
 
       {tab === "income" && (
         <>
-          <IncomeTab state={state} refresh={refresh} showToast={showToast} />
           <KassaTab showToast={showToast} budgetState={state} />
+          <IncomeTab state={state} refresh={refresh} showToast={showToast} />
         </>
       )}
       {tab === "spend" && (
