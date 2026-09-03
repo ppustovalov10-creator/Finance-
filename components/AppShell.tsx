@@ -12,6 +12,7 @@ import EnvelopesTab from "./EnvelopesTab";
 import KassaTab from "./KassaTab";
 import AchievementsScreen from "./AchievementsScreen";
 import Toast from "./Toast";
+import AchievementToast from "./AchievementToast";
 
 type Tab = "income" | "spend";
 
@@ -23,7 +24,9 @@ export default function AppShell() {
   const [toast, setToast] = useState<{ text: string; isError?: boolean } | null>(null);
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [achievementsOpen, setAchievementsOpen] = useState(false);
+  const [achievementToast, setAchievementToast] = useState<NewAchievement | null>(null);
   const achievementQueue = useRef<NewAchievement[]>([]);
+  const achievementToastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const refresh = useCallback(async () => {
     const s = await api.getState();
@@ -51,15 +54,17 @@ export default function AppShell() {
     const showNext = () => {
       const next = achievementQueue.current.shift();
       if (!next) return;
-      showToast(`${next.icon} Новое достижение: ${next.title}`);
-      if (achievementQueue.current.length > 0) setTimeout(showNext, 2600);
+      setAchievementToast(next);
+      if (achievementToastTimer.current) clearTimeout(achievementToastTimer.current);
+      achievementToastTimer.current = setTimeout(() => setAchievementToast(null), 3200);
+      if (achievementQueue.current.length > 0) setTimeout(showNext, 3800);
     };
     onNewAchievements((list) => {
       const wasEmpty = achievementQueue.current.length === 0;
       achievementQueue.current.push(...list);
       if (wasEmpty) showNext();
     });
-  }, [showToast]);
+  }, []);
 
   if (!state) {
     return (
@@ -137,7 +142,8 @@ export default function AppShell() {
 
       {achievementsOpen && <AchievementsScreen onClose={() => setAchievementsOpen(false)} />}
 
-      {toast && <Toast text={toast.text} isError={toast.isError} />}
+      {achievementToast && <AchievementToast icon={achievementToast.icon} title={achievementToast.title} />}
+      {toast && !achievementToast && <Toast text={toast.text} isError={toast.isError} />}
     </div>
   );
 }

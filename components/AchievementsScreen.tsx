@@ -23,10 +23,107 @@ const PATHS: { name: string; progressKey: string; unit: (v: number) => string }[
 ];
 
 const SITUATIONAL_GROUPS: { title: string; keys: string[] }[] = [
-  { title: "Касса", keys: ["kassa_bullseye", "kassa_explosion", "kassa_volcano", "kassa_bounce", "kassa_no_gaps"] },
-  { title: "Цели", keys: ["goal_first_seed", "goal_first_finish", "goal_beat_deadline", "goal_rollercoaster"] },
-  { title: "Бюджетная дисциплина", keys: ["budget_cold_head", "budget_caught_myself", "budget_own_system"] },
-  { title: "Подушка", keys: ["reserve_first_egg", "reserve_purposeful"] },
+  {
+    title: "Касса",
+    keys: [
+      "kassa_bullseye",
+      "kassa_explosion",
+      "kassa_volcano",
+      "kassa_bounce",
+      "kassa_no_gaps",
+      "kassa_double_tier1",
+      "kassa_double_tier2",
+      "kassa_double_tier3",
+      "kassa_no_gaps_count_tier1",
+      "kassa_no_gaps_count_tier2",
+      "kassa_no_gaps_count_tier3",
+      "kassa_bullseye_count_tier1",
+      "kassa_bullseye_count_tier2",
+      "kassa_bullseye_count_tier3",
+    ],
+  },
+  {
+    title: "Цели",
+    keys: [
+      "goal_first_seed",
+      "goal_first_finish",
+      "goal_beat_deadline",
+      "goal_rollercoaster",
+      "goals_created_tier1",
+      "goals_created_tier2",
+      "goals_created_tier3",
+      "goal_ontrack_tier1",
+      "goal_ontrack_tier2",
+      "goal_ontrack_tier3",
+      "goal_over_plan_tier1",
+      "goal_over_plan_tier2",
+      "goal_over_plan_tier3",
+      "goal_early14_tier1",
+      "goal_early14_tier2",
+      "goal_early14_tier3",
+    ],
+  },
+  {
+    title: "Бюджетная дисциплина",
+    keys: [
+      "budget_cold_head",
+      "budget_caught_myself",
+      "budget_own_system",
+      "custom_envelopes_tier1",
+      "custom_envelopes_tier2",
+      "custom_envelopes_tier3",
+      "category_variety_tier1",
+      "category_variety_tier2",
+      "category_variety_tier3",
+      "cold_head_streak_tier1",
+      "cold_head_streak_tier2",
+      "cold_head_streak_tier3",
+      "desc_count_tier1",
+      "desc_count_tier2",
+      "desc_count_tier3",
+      "same_day_log_tier1",
+      "same_day_log_tier2",
+      "same_day_log_tier3",
+      "no_misc_tier1",
+      "no_misc_tier2",
+      "no_misc_tier3",
+    ],
+  },
+  {
+    title: "Подушка",
+    keys: [
+      "reserve_first_egg",
+      "reserve_purposeful",
+      "reserve_topups_tier1",
+      "reserve_topups_tier2",
+      "reserve_topups_tier3",
+    ],
+  },
+  {
+    title: "Инвестиции",
+    keys: ["invest_streak_tier1", "invest_streak_tier2", "invest_streak_tier3"],
+  },
+  {
+    title: "Доход",
+    keys: ["income_above_avg_tier1", "income_above_avg_tier2", "income_above_avg_tier3"],
+  },
+  {
+    title: "Марафон",
+    keys: [
+      "txn_count_tier1",
+      "txn_count_tier2",
+      "txn_count_tier3",
+      "kassa_shifts_tier1",
+      "kassa_shifts_tier2",
+      "kassa_shifts_tier3",
+      "income_weeks_tier1",
+      "income_weeks_tier2",
+      "income_weeks_tier3",
+      "app_active_days_tier1",
+      "app_active_days_tier2",
+      "app_active_days_tier3",
+    ],
+  },
 ];
 
 function fmtDate(iso: string): string {
@@ -85,12 +182,17 @@ export default function AchievementsScreen({ onClose }: { onClose: () => void })
                           className="rounded-xl py-3 px-1 text-center cursor-pointer flex flex-col items-center"
                           style={{
                             background: isUnlocked ? "var(--hover)" : "transparent",
-                            border: isUnlocked ? "1px solid var(--border)" : "1px dashed var(--border)",
+                            border: isUnlocked ? "1px solid rgba(242,184,75,0.35)" : "1px dashed var(--border)",
                             opacity: isUnlocked ? 1 : 0.55,
                           }}
                         >
-                          <div style={{ fontSize: 26 }}>{d.icon}</div>
-                          <div className="text-[9.5px] mt-1" style={{ color: "var(--muted)" }}>
+                          <div
+                            className="w-9 h-9 rounded-lg flex items-center justify-center text-[18px]"
+                            style={{ background: isUnlocked ? "linear-gradient(135deg, #F2B84B, #E8735A)" : "var(--border)" }}
+                          >
+                            {d.icon}
+                          </div>
+                          <div className="text-[9.5px] mt-1.5" style={{ color: "var(--muted)" }}>
                             {isTier4Special ? "спец." : `ур. ${d.tier}`}
                           </div>
                         </button>
@@ -139,7 +241,7 @@ export default function AchievementsScreen({ onClose }: { onClose: () => void })
             {SITUATIONAL_GROUPS.map((group) => (
               <div key={group.title} className="mb-5">
                 <div className="text-[13px] font-semibold mb-2">{group.title}</div>
-                <div className="grid grid-cols-2 gap-2">
+                <div className="flex flex-col gap-2">
                   {group.keys.map((key) => {
                     const d = data.achievements.find((a) => a.key === key);
                     if (!d) return null;
@@ -147,23 +249,30 @@ export default function AchievementsScreen({ onClose }: { onClose: () => void })
                     return (
                       <div
                         key={key}
-                        className="rounded-xl p-3"
+                        className="rounded-xl p-2.5 flex items-center gap-3"
                         style={{
                           background: unlockedAt ? "var(--hover)" : "transparent",
-                          border: unlockedAt ? "1px solid var(--border)" : "1px dashed var(--border)",
+                          border: unlockedAt ? "1px solid rgba(242,184,75,0.35)" : "1px dashed var(--border)",
                           opacity: unlockedAt ? 1 : 0.55,
                         }}
                       >
-                        <div style={{ fontSize: 22 }}>{d.icon}</div>
-                        <div className="text-[12px] font-semibold mt-1">{d.title}</div>
-                        <div className="text-[10.5px] mt-0.5" style={{ color: "var(--muted)" }}>
-                          {d.description}
+                        <div
+                          className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0 text-[19px]"
+                          style={{ background: unlockedAt ? "linear-gradient(135deg, #F2B84B, #E8735A)" : "var(--border)" }}
+                        >
+                          {d.icon}
                         </div>
-                        {unlockedAt && (
-                          <div className="text-[10.5px] mt-1" style={{ color: "var(--pos)" }}>
-                            Получено {fmtDate(unlockedAt)}
+                        <div className="min-w-0">
+                          <div className="text-[12.5px] font-semibold">{d.title}</div>
+                          <div className="text-[10.5px] mt-0.5" style={{ color: "var(--muted)" }}>
+                            {d.description}
                           </div>
-                        )}
+                          {unlockedAt && (
+                            <div className="text-[10.5px] mt-1" style={{ color: "var(--pos)" }}>
+                              Получено {fmtDate(unlockedAt)}
+                            </div>
+                          )}
+                        </div>
                       </div>
                     );
                   })}

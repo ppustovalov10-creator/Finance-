@@ -14,7 +14,10 @@ export const PUT = withUser(async (userId, req) => {
   if (!newName) throw new Error("Название не может быть пустым");
   if (newName !== category) {
     const state = await getAppState(userId);
-    if (state.categories.includes(newName)) {
+    // Same reasoning as the create route: check actual envelope rows, not
+    // state.categories, which also carries every transaction category and
+    // the built-in CATEGORIES seed and would false-positive on those.
+    if (state.envelopes.some((e) => e.category === newName)) {
       throw new Error("Конверт с таким названием уже есть — выбери другое имя");
     }
   }

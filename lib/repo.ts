@@ -10,6 +10,7 @@ import {
   checkGoalAchievements,
   checkTransactionAchievements,
   checkKeywordAchievements,
+  checkEnvelopeAchievements,
   type UnlockedAchievement,
 } from "./achievements-repo";
 export type { UnlockedAchievement };
@@ -480,6 +481,8 @@ export async function createEnvelope(
      values ($1, $2, $3, $4, false, true)`,
     [userId, input.name, input.cap, input.iconKey]
   );
+  const newAchievements = await checkEnvelopeAchievements(pool, userId);
+  return { newAchievements };
 }
 
 export async function updateEnvelope(
