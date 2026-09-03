@@ -40,7 +40,7 @@ export const api = {
     call("/api/income", "POST", b),
   updateGoal: (b: { name: string; target: number; saved: number; deadlineDate: string; isNewMoney?: boolean; startNew?: boolean }) =>
     call("/api/goal", "PUT", b),
-  addTransaction: (b: { amount: number; desc: string; dateStr: string }) =>
+  addTransaction: (b: { amount: number; desc: string; dateStr: string; cat?: string }) =>
     call<{ id: string; cat: string }>("/api/transactions", "POST", b),
   updateTransaction: (
     id: string,

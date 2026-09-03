@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { AppState, Transaction } from "@/lib/types";
 import { weeklyCapsOf } from "@/lib/types";
 import { addDays, daysUntil } from "@/lib/date";
@@ -13,6 +13,8 @@ import { Card, Tag, InfoBtn } from "./HomeCardBits";
 import InfoModal from "./InfoModal";
 import type { Refresh, ShowToast } from "./AppShell";
 import { api } from "@/lib/api-client";
+
+const INVEST_CAT = "Инвестиции";
 
 // Everything related to spending — how much is left today, what's gone out,
 // the day-by-day pace, and adding a transaction. Конверты (envelope limits)
@@ -38,6 +40,21 @@ export default function SpendTab({ state, refresh, showToast }: { state: AppStat
   const [reserveModal, setReserveModal] = useState(false);
   const [infoKey, setInfoKey] = useState<string | null>(null);
   const [survivalBusy, setSurvivalBusy] = useState(false);
+  const [investOpen, setInvestOpen] = useState(false);
+
+  const hasInvestEnvelope = state.envelopes.some((e) => e.category === INVEST_CAT);
+  const investCreateAttempted = useRef(false);
+  useEffect(() => {
+    // "Инвестиции" is a mandatory weekly envelope (regular, uncapped) — it's
+    // pinned as its own card here rather than left for the user to create by
+    // hand, so provision it silently the first time this tab renders without
+    // it. Guarded by a ref (not just hasInvestEnvelope) so a re-render before
+    // refresh() resolves can't fire a second, colliding create call.
+    if (!hasInvestEnvelope && !investCreateAttempted.current) {
+      investCreateAttempted.current = true;
+      api.createEnvelope({ name: INVEST_CAT, iconKey: "cash", cap: null }).then(refresh).catch(() => {});
+    }
+  }, [hasInvestEnvelope, refresh]);
 
   async function toggleSurvival() {
     setSurvivalBusy(true);
@@ -54,9 +71,10 @@ export default function SpendTab({ state, refresh, showToast }: { state: AppStat
   const perDay = hasIncome ? (daysLeft > 0 ? remaining / daysLeft : remaining) : 0;
 
   const byCat = categoryTotalsThisWeek(state);
+  const investAmt = byCat[INVEST_CAT] || 0;
   const allCats = new Set<string>([...Object.keys(byCat), ...Object.keys(caps)]);
+  allCats.delete(INVEST_CAT);
   const catList = [...allCats].map((cat) => [cat, byCat[cat] || 0] as [string, number]).sort((a, b) => b[1] - a[1]);
-  const maxCat = Math.max(1, ...catList.map((c) => c[1]), ...Object.values(caps));
 
   return (
     <div className="max-w-[420px] mx-auto px-5 pt-6 pb-[100px]">
@@ -135,13 +153,11 @@ export default function SpendTab({ state, refresh, showToast }: { state: AppStat
             </div>
           )}
         </Card>
-        <Card>
-          <Tag>
-            Буфер 10% <InfoBtn onClick={() => setInfoKey("target")} />
-          </Tag>
-          <div className="font-display font-semibold text-[22px]">{fmt(targetInfo.bufferAmt)}</div>
+        <Card onClick={() => setInvestOpen(true)}>
+          <Tag>Инвестиции</Tag>
+          <div className="font-display font-semibold text-[22px]">{fmt(-investAmt)}</div>
           <div className="text-[11.5px] mt-1" style={{ color: "var(--muted)" }}>
-            заложено в «Нужно заработать»
+            обязательная трата — нажми, чтобы внести
           </div>
         </Card>
       </div>
@@ -149,25 +165,24 @@ export default function SpendTab({ state, refresh, showToast }: { state: AppStat
       <div className="text-xs uppercase tracking-wide mt-3 mb-2.5" style={{ color: "var(--muted)" }}>
         Потрачено на:
       </div>
-      <div className="mb-2">
+      <div className="grid grid-cols-2 gap-2 mb-2">
         {catList.map(([cat, amt]) => {
           const cap = caps[cat];
           const over = cap !== undefined && amt > cap;
+          const filled = amt > 0;
+          const bg = over ? "rgba(232,115,95,0.15)" : filled ? "rgba(111,207,123,0.14)" : "var(--hover)";
+          const border = over ? "var(--danger)" : filled ? "rgba(111,207,123,0.35)" : "var(--border)";
           return (
-            <div key={cat}>
-              <div className="flex items-center gap-2.5 py-2" style={{ borderBottom: "1px solid var(--line)", fontSize: "13.5px" }}>
-                <IconBadge name={iconKeyFor(cat, state.envelopes)} />
-                <div className="flex-1">{cat}</div>
-                <div className="font-display font-semibold" style={{ color: over ? "var(--danger)" : "var(--muted)" }}>
-                  {fmt(amt)}
-                  {cap !== undefined ? ` / лимит ${fmt(cap)}` : ""}
-                </div>
+            <div key={cat} className="rounded-2xl p-3" style={{ background: bg, border: `1px solid ${border}` }}>
+              <div className="flex items-center gap-1.5 mb-1.5">
+                <IconBadge name={iconKeyFor(cat, state.envelopes)} small />
+                <div className="text-[11.5px] font-semibold flex-1 truncate">{cat}</div>
               </div>
-              <div className="h-1 rounded-full mt-1.5" style={{ background: "var(--line)" }}>
-                <div
-                  className="h-full rounded-full"
-                  style={{ width: `${Math.min(100, (amt / maxCat) * 100)}%`, opacity: 0.5, background: over ? "var(--danger)" : "var(--accent-blue)" }}
-                />
+              <div className="font-display font-semibold text-[16px]" style={{ color: over ? "var(--danger)" : "var(--ink)" }}>
+                {fmt(amt)}
+              </div>
+              <div className="text-[10px] mt-0.5" style={{ color: "var(--muted)" }}>
+                {cap !== undefined ? `из ${fmt(cap)}` : "без лимита"}
               </div>
             </div>
           );
@@ -271,6 +286,16 @@ export default function SpendTab({ state, refresh, showToast }: { state: AppStat
       />
       <EditTxModal key={editTx?.id || "edit-closed"} show={!!editTx} onClose={() => setEditTx(null)} state={state} refresh={refresh} showToast={showToast} tx={editTx} />
       <ReserveEditModal key={reserveModal ? "reserve-open" : "reserve-closed"} show={reserveModal} onClose={() => setReserveModal(false)} state={state} refresh={refresh} showToast={showToast} />
+      <AddTxModal
+        key={investOpen ? "invest-open" : "invest-closed"}
+        show={investOpen}
+        onClose={() => setInvestOpen(false)}
+        state={state}
+        refresh={refresh}
+        showToast={showToast}
+        dateOverride={null}
+        forceCat={INVEST_CAT}
+      />
       <InfoModal infoKey={infoKey} onClose={() => setInfoKey(null)} />
     </div>
   );

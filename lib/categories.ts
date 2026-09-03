@@ -14,6 +14,7 @@ export const CATEGORIES = [
   "Прочие операции",
   "Перевод с карты",
   "Пополнение",
+  "Инвестиции",
 ];
 
 export const CATEGORY_PCT: Record<string, number> = {
@@ -46,6 +47,7 @@ export const CAT_ICON: Record<string, string> = {
   "Прочие операции": "help",
   "Перевод с карты": "exchange",
   Пополнение: "plus",
+  Инвестиции: "cash",
 };
 
 export const ICON_PICK_CHOICES = [

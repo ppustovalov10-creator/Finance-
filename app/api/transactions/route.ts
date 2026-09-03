@@ -5,6 +5,7 @@ interface Body {
   amount: number;
   desc: string;
   dateStr: string; // DD.MM.YYYY
+  cat?: string;
 }
 
 export const POST = withUser(async (userId, req) => {
@@ -13,5 +14,5 @@ export const POST = withUser(async (userId, req) => {
     throw new Error("Не вижу сумму — впиши число больше нуля");
   }
   if (!/^\d{2}\.\d{2}\.\d{4}$/.test(body.dateStr)) throw new Error("Некорректная дата");
-  return addTransaction(userId, { amount: body.amount, desc: (body.desc || "").trim(), dateStr: body.dateStr });
+  return addTransaction(userId, { amount: body.amount, desc: (body.desc || "").trim(), dateStr: body.dateStr, cat: body.cat });
 });

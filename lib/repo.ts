@@ -413,10 +413,13 @@ export async function updateGoal(
 
 export async function addTransaction(
   userId: string,
-  input: { amount: number; desc: string; dateStr: string }
+  input: { amount: number; desc: string; dateStr: string; cat?: string }
 ) {
-  const state = await getAppState(userId);
-  const cat = categorize(input.desc, state.customKeywords);
+  let cat = input.cat;
+  if (!cat) {
+    const state = await getAppState(userId);
+    cat = categorize(input.desc, state.customKeywords);
+  }
   const iso = ddmmyyyyToIso(input.dateStr);
   const res = await pool.query(
     `insert into transactions (user_id, date, category, description, amount)

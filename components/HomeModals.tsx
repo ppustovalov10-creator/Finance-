@@ -363,7 +363,8 @@ export function AddTxModal({
   refresh,
   showToast,
   dateOverride,
-}: ModalBaseProps & { dateOverride: string | null }) {
+  forceCat,
+}: ModalBaseProps & { dateOverride: string | null; forceCat?: string }) {
   const [amount, setAmount] = useState("");
   const [desc, setDesc] = useState("");
   const [dateIso, setDateIso] = useState(dateOverride ? ddmmyyyyToIso(dateOverride) : new Date().toISOString().slice(0, 10));
@@ -385,10 +386,10 @@ export function AddTxModal({
     const dateStr = /^\d{4}-\d{2}-\d{2}$/.test(dateIso) ? isoToDDMMYYYY(dateIso) : new Date().toLocaleDateString("ru-RU");
     setBusy(true);
     try {
-      await api.addTransaction({ amount: amt, desc: d, dateStr });
+      await api.addTransaction({ amount: amt, desc: d || forceCat || "", dateStr, cat: forceCat });
       await refresh();
       onClose();
-      showToast(`Записано на ${dateStr}: ${fmt(-amt)}`);
+      showToast(`Записано на ${dateStr}: ${fmt(-amt)}${forceCat ? ` · ${forceCat}` : ""}`);
     } catch (e) {
       setErr(e instanceof Error ? e.message : "Не удалось сохранить");
     } finally {
@@ -398,6 +399,7 @@ export function AddTxModal({
 
   return (
     <Sheet show={show} onClose={onClose}>
+      {forceCat && <SheetTitle>{forceCat}</SheetTitle>}
       <FieldLabel first>Сумма траты</FieldLabel>
       <AmountInput value={amount} onChange={(e) => setAmount(e.target.value)} />
       <div style={{ textAlign: "center", color: "#8A8B7E", fontSize: 12, marginBottom: 20 }}>₽</div>
