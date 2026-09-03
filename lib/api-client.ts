@@ -1,6 +1,6 @@
 import type { AppState } from "./types";
 import type { KassaState, KassaCalcResult } from "./kassa";
-import type { AchievementDef } from "./achievements-data";
+import type { AchievementDef, Rarity } from "./achievements-data";
 
 export class ApiError extends Error {}
 
@@ -8,6 +8,7 @@ export interface NewAchievement {
   key: string;
   title: string;
   icon: string;
+  rarity: Rarity;
 }
 
 // Any API response can carry a `newAchievements` array (set server-side by

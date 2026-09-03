@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api-client";
-import type { AchievementDef } from "@/lib/achievements-data";
+import { RARITY_LABELS, RARITY_ORDER, RARITY_STYLE, type AchievementDef } from "@/lib/achievements-data";
 
 interface Overview {
   achievements: AchievementDef[];
@@ -174,6 +174,7 @@ export default function AchievementsScreen({ onClose }: { onClose: () => void })
                       const isUnlocked = !!data.unlocked[d.key];
                       const isExpanded = expandedKey === d.key;
                       const isTier4Special = d.key === "kassa_streak_tier4" || d.key === "goals_closed_tier4";
+                      const style = RARITY_STYLE[d.rarity];
                       return (
                         <button
                           key={d.key}
@@ -182,13 +183,13 @@ export default function AchievementsScreen({ onClose }: { onClose: () => void })
                           className="rounded-xl py-3 px-1 text-center cursor-pointer flex flex-col items-center"
                           style={{
                             background: isUnlocked ? "var(--hover)" : "transparent",
-                            border: isUnlocked ? "1px solid rgba(242,184,75,0.35)" : "1px dashed var(--border)",
+                            border: isUnlocked ? `1px solid ${style.border}` : "1px dashed var(--border)",
                             opacity: isUnlocked ? 1 : 0.55,
                           }}
                         >
                           <div
                             className="w-9 h-9 rounded-lg flex items-center justify-center text-[18px]"
-                            style={{ background: isUnlocked ? "linear-gradient(135deg, #F2B84B, #E8735A)" : "var(--border)" }}
+                            style={{ background: isUnlocked ? style.bg : "var(--border)" }}
                           >
                             {d.icon}
                           </div>
@@ -207,9 +208,15 @@ export default function AchievementsScreen({ onClose }: { onClose: () => void })
                       {(() => {
                         const d = defs.find((x) => x.key === expandedKey)!;
                         const unlockedAt = data.unlocked[d.key];
+                        const rarityTag = (
+                          <div className="text-[10px] font-bold uppercase tracking-wide mb-1" style={{ color: RARITY_STYLE[d.rarity].glow }}>
+                            {RARITY_LABELS[d.rarity]}
+                          </div>
+                        );
                         if (unlockedAt) {
                           return (
                             <>
+                              {rarityTag}
                               <div style={{ color: "var(--pos)", fontWeight: 700 }}>{d.title}</div>
                               <div>{d.description}</div>
                               <div className="mt-1">Получено {fmtDate(unlockedAt)}</div>
@@ -224,6 +231,7 @@ export default function AchievementsScreen({ onClose }: { onClose: () => void })
                               : `Сейчас: ${p.unit(rawValue)}`;
                         return (
                           <>
+                            {rarityTag}
                             <div style={{ fontWeight: 700, color: "var(--ink)" }}>{d.title}</div>
                             <div>{d.description}</div>
                             <div className="mt-1">{progressText}</div>
@@ -238,47 +246,55 @@ export default function AchievementsScreen({ onClose }: { onClose: () => void })
 
             <div className="h-4" />
 
-            {SITUATIONAL_GROUPS.map((group) => (
-              <div key={group.title} className="mb-5">
-                <div className="text-[13px] font-semibold mb-2">{group.title}</div>
-                <div className="flex flex-col gap-2">
-                  {group.keys.map((key) => {
-                    const d = data.achievements.find((a) => a.key === key);
-                    if (!d) return null;
-                    const unlockedAt = data.unlocked[key];
-                    return (
-                      <div
-                        key={key}
-                        className="rounded-xl p-2.5 flex items-center gap-3"
-                        style={{
-                          background: unlockedAt ? "var(--hover)" : "transparent",
-                          border: unlockedAt ? "1px solid rgba(242,184,75,0.35)" : "1px dashed var(--border)",
-                          opacity: unlockedAt ? 1 : 0.55,
-                        }}
-                      >
+            {SITUATIONAL_GROUPS.map((group) => {
+              const defs = group.keys
+                .map((key) => data.achievements.find((a) => a.key === key))
+                .filter((d): d is AchievementDef => !!d)
+                .sort((a, b) => RARITY_ORDER.indexOf(a.rarity) - RARITY_ORDER.indexOf(b.rarity));
+              return (
+                <div key={group.title} className="mb-5">
+                  <div className="text-[13px] font-semibold mb-2">{group.title}</div>
+                  <div className="flex flex-col gap-2">
+                    {defs.map((d) => {
+                      const unlockedAt = data.unlocked[d.key];
+                      const style = RARITY_STYLE[d.rarity];
+                      return (
                         <div
-                          className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0 text-[19px]"
-                          style={{ background: unlockedAt ? "linear-gradient(135deg, #F2B84B, #E8735A)" : "var(--border)" }}
+                          key={d.key}
+                          className="rounded-xl p-2.5 flex items-center gap-3"
+                          style={{
+                            background: unlockedAt ? "var(--hover)" : "transparent",
+                            border: unlockedAt ? `1px solid ${style.border}` : "1px dashed var(--border)",
+                            opacity: unlockedAt ? 1 : 0.55,
+                          }}
                         >
-                          {d.icon}
-                        </div>
-                        <div className="min-w-0">
-                          <div className="text-[12.5px] font-semibold">{d.title}</div>
-                          <div className="text-[10.5px] mt-0.5" style={{ color: "var(--muted)" }}>
-                            {d.description}
+                          <div
+                            className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0 text-[19px]"
+                            style={{ background: unlockedAt ? style.bg : "var(--border)" }}
+                          >
+                            {d.icon}
                           </div>
-                          {unlockedAt && (
-                            <div className="text-[10.5px] mt-1" style={{ color: "var(--pos)" }}>
-                              Получено {fmtDate(unlockedAt)}
+                          <div className="min-w-0">
+                            <div className="text-[9px] font-bold uppercase tracking-wide" style={{ color: style.glow }}>
+                              {RARITY_LABELS[d.rarity]}
                             </div>
-                          )}
+                            <div className="text-[12.5px] font-semibold">{d.title}</div>
+                            <div className="text-[10.5px] mt-0.5" style={{ color: "var(--muted)" }}>
+                              {d.description}
+                            </div>
+                            {unlockedAt && (
+                              <div className="text-[10.5px] mt-1" style={{ color: "var(--pos)" }}>
+                                Получено {fmtDate(unlockedAt)}
+                              </div>
+                            )}
+                          </div>
                         </div>
-                      </div>
-                    );
-                  })}
+                      );
+                    })}
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </>
         )}
       </div>

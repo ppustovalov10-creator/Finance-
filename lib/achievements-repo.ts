@@ -33,6 +33,7 @@ import {
   NO_MISC_THRESHOLDS,
   APP_ACTIVE_DAYS_THRESHOLDS,
   GOAL_EARLY14_THRESHOLDS,
+  type Rarity,
 } from "./achievements-data";
 
 const INVEST_CATEGORY = "Инвестиции";
@@ -48,6 +49,7 @@ export interface UnlockedAchievement {
   key: string;
   title: string;
   icon: string;
+  rarity: Rarity;
 }
 
 async function unlock(db: Queryable, userId: string, key: string): Promise<UnlockedAchievement | null> {
@@ -60,7 +62,7 @@ async function unlock(db: Queryable, userId: string, key: string): Promise<Unloc
   if (res.rows.length === 0) return null;
   const def = ACHIEVEMENTS.find((a) => a.key === key);
   if (!def) return null;
-  return { key, title: def.title, icon: def.icon };
+  return { key, title: def.title, icon: def.icon, rarity: def.rarity };
 }
 
 async function unlockTiers(db: Queryable, userId: string, pathKey: string, value: number, thresholds: number[]): Promise<UnlockedAchievement[]> {

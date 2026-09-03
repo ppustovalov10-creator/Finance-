@@ -142,7 +142,9 @@ export default function AppShell() {
 
       {achievementsOpen && <AchievementsScreen onClose={() => setAchievementsOpen(false)} />}
 
-      {achievementToast && <AchievementToast icon={achievementToast.icon} title={achievementToast.title} />}
+      {achievementToast && (
+        <AchievementToast icon={achievementToast.icon} title={achievementToast.title} rarity={achievementToast.rarity} />
+      )}
       {toast && !achievementToast && <Toast text={toast.text} isError={toast.isError} />}
     </div>
   );
