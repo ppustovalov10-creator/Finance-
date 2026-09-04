@@ -17,6 +17,7 @@ export default function KassaTab({ showToast, budgetState }: { showToast: ShowTo
   const [entryModalOpen, setEntryModalOpen] = useState(false);
   const [entryModalDate, setEntryModalDate] = useState<string | null>(null);
   const [editEntry, setEditEntry] = useState<KassaEntry | null>(null);
+  const [daysOpen, setDaysOpen] = useState(false);
 
   const refresh = useCallback(async () => {
     const s = await api.getKassaState();
@@ -203,9 +204,18 @@ export default function KassaTab({ showToast, budgetState }: { showToast: ShowTo
         Изменить цель
       </button>
 
-      <div className="text-xs uppercase tracking-wide mb-2.5" style={{ color: "var(--muted)" }}>
-        По дням этой недели
+      <div
+        className="flex items-center justify-between mb-2.5 cursor-pointer select-none"
+        onClick={() => setDaysOpen((v) => !v)}
+      >
+        <div className="text-xs uppercase tracking-wide" style={{ color: "var(--muted)" }}>
+          По дням этой недели
+        </div>
+        <div className="text-[11.5px] underline" style={{ color: "var(--accent-blue)" }}>
+          {daysOpen ? "Свернуть ▴" : "Показать ▾"}
+        </div>
       </div>
+      {daysOpen && (
       <div>
         {days.map((d) => (
           <div key={d.dateStr} className="mb-4">
@@ -270,6 +280,7 @@ export default function KassaTab({ showToast, budgetState }: { showToast: ShowTo
           </div>
         ))}
       </div>
+      )}
 
       <button
         onClick={() => {

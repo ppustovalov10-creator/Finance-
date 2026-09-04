@@ -41,6 +41,7 @@ export default function SpendTab({ state, refresh, showToast }: { state: AppStat
   const [infoKey, setInfoKey] = useState<string | null>(null);
   const [survivalBusy, setSurvivalBusy] = useState(false);
   const [investOpen, setInvestOpen] = useState(false);
+  const [daysOpen, setDaysOpen] = useState(false);
 
   const hasInvestEnvelope = state.envelopes.some((e) => e.category === INVEST_CAT);
   const investCreateAttempted = useRef(false);
@@ -189,9 +190,18 @@ export default function SpendTab({ state, refresh, showToast }: { state: AppStat
         })}
       </div>
 
-      <div className="text-xs uppercase tracking-wide mt-6 mb-2.5" style={{ color: "var(--muted)" }}>
-        По дням этой недели
+      <div
+        className="flex items-center justify-between mt-6 mb-2.5 cursor-pointer select-none"
+        onClick={() => setDaysOpen((v) => !v)}
+      >
+        <div className="text-xs uppercase tracking-wide" style={{ color: "var(--muted)" }}>
+          По дням этой недели
+        </div>
+        <div className="text-[11.5px] underline" style={{ color: "var(--accent-blue)" }}>
+          {daysOpen ? "Свернуть ▴" : "Показать ▾"}
+        </div>
       </div>
+      {daysOpen && (
       <div id="dayBreakdown">
         {days.map((d) => (
           <div key={d.dateStr} className="mb-4">
@@ -253,6 +263,7 @@ export default function SpendTab({ state, refresh, showToast }: { state: AppStat
           </div>
         ))}
       </div>
+      )}
 
       <button
         type="button"
