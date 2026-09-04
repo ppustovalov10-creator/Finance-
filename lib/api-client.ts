@@ -56,8 +56,7 @@ export const api = {
   addKeyword: (category: string, keyword: string) => call("/api/keywords", "POST", { category, keyword }),
   removeKeyword: (category: string, keyword: string) => call("/api/keywords", "DELETE", { category, keyword }),
   updateFloor: (value: number) => call("/api/floor", "PUT", { value }),
-  updateReserve: (b: { pctPercent: number; saved: number; withdraw: number | null; isNewMoney?: boolean }) =>
-    call("/api/reserve", "PUT", b),
+  updateReserve: (b: { saved: number; withdraw: number | null; isNewMoney?: boolean }) => call("/api/reserve", "PUT", b),
   setSurvival: (on: boolean) => call("/api/survival", "POST", { on }),
   onboardingFinish: (b: {
     goalName: string;

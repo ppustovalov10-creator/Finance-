@@ -191,17 +191,17 @@ export interface CommittedThisWeek {
 }
 
 /**
- * Money already committed this week via a goal contribution or the reserve
- * auto-skim logged against the current week's start date — it's no longer
- * spendable even though it never became a `transactions` row, so it has to
- * come off the weekly balance the same way a spend would.
+ * Money already committed this week via a goal or reserve contribution
+ * made since the current week was fixed — it's no longer spendable even
+ * though it never became a `transactions` row, so it has to come off the
+ * weekly balance the same way a spend would.
  */
 export function committedThisWeek(state: AppState): CommittedThisWeek {
   // Delta since the snapshot taken when this week was fixed — catches money
   // committed to the goal or reserve however it got there: the
-  // income-fixation flow's own contribution field, the reserve auto-skim,
-  // or a manual edit via "Изменить цель" / "Подушка безопасности" that
-  // never touches goal_log/reserve_log at all.
+  // income-fixation flow's own goal-contribution field, or a manual edit
+  // via "Изменить цель" / "Подушка безопасности" that never touches
+  // goal_log/reserve_log at all.
   const goalContribution = state.goal.saved - state.currentWeek.goalSavedAtWeekStart;
   const reserveContribution = state.reserve.saved - state.currentWeek.reserveSavedAtWeekStart;
   return { goalContribution, reserveContribution, total: goalContribution + reserveContribution };

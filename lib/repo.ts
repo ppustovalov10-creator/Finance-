@@ -229,27 +229,6 @@ export async function fixWeeklyIncome(userId: string, input: FixIncomeInput) {
 
     await recalcCapsFromIncome(client, userId, input.incomeVal, true);
 
-    const reserveRes = await client.query("select pct from reserve_fund where user_id = $1", [userId]);
-    const pct = reserveRes.rows[0] ? Number(reserveRes.rows[0].pct) : 0;
-    if (pct > 0) {
-      const skim = Math.round(input.incomeVal * pct);
-      await client.query("update reserve_fund set saved_amount = saved_amount + $2 where user_id = $1", [
-        userId,
-        skim,
-      ]);
-      await client.query("insert into reserve_log (user_id, date, amount) values ($1, $2, $3)", [
-        userId,
-        iso,
-        skim,
-      ]);
-      await client.query(
-        `delete from reserve_log where id in (
-           select id from reserve_log where user_id = $1 order by created_at desc offset 30
-         )`,
-        [userId]
-      );
-    }
-
     if (input.goalSavedVal > 0 && state.goal.id) {
       await client.query("update goals set saved_amount = saved_amount + $2 where id = $1", [
         state.goal.id,
@@ -323,18 +302,6 @@ export async function completeOnboarding(userId: string, input: OnboardingInput)
     );
 
     await recalcCapsFromIncome(client, userId, input.income, false);
-
-    const reserveRes = await client.query("select pct, saved_amount from reserve_fund where user_id = $1", [
-      userId,
-    ]);
-    const pct = reserveRes.rows[0] ? Number(reserveRes.rows[0].pct) : 0.05;
-    const skim = Math.round(input.income * pct);
-    await client.query(
-      `insert into reserve_fund (user_id, saved_amount, pct) values ($1, $2, $3)
-       on conflict (user_id) do update set saved_amount = reserve_fund.saved_amount + $2`,
-      [userId, skim, pct]
-    );
-    await client.query("insert into reserve_log (user_id, date, amount) values ($1, $2, $3)", [userId, iso, skim]);
 
     await client.query(
       `insert into settings (user_id, onboarded) values ($1, true)
@@ -561,7 +528,7 @@ export async function updateFloor(userId: string, value: number) {
 
 export async function updateReserve(
   userId: string,
-  input: { pct: number; saved: number; withdraw: number | null; isNewMoney?: boolean }
+  input: { saved: number; withdraw: number | null; isNewMoney?: boolean }
 ) {
   return withTransaction(async (client) => {
     const existing = await client.query("select saved_amount from reserve_fund where user_id = $1", [userId]);
@@ -581,9 +548,9 @@ export async function updateReserve(
       ]);
     }
     await client.query(
-      `insert into reserve_fund (user_id, saved_amount, pct) values ($1, $2, $3)
-       on conflict (user_id) do update set saved_amount = $2, pct = $3`,
-      [userId, saved, input.pct]
+      `insert into reserve_fund (user_id, saved_amount) values ($1, $2)
+       on conflict (user_id) do update set saved_amount = $2`,
+      [userId, saved]
     );
 
     if (!input.isNewMoney && manualDelta !== 0) {

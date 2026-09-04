@@ -3,11 +3,11 @@ export interface CurrentWeek {
   income: number | null;
   carryIn: number;
   // Snapshots of goal.saved / reserve.saved taken the moment this week was
-  // fixed (before that fixation's own contribution/skim was applied). The
-  // difference between the live value and this snapshot is however much has
-  // been committed to the goal or reserve since — via the income-fixation
-  // flow's own contribution field, an auto-skim, *or* a manual edit — and is
-  // no longer part of the spendable weekly balance.
+  // fixed (before that fixation's own goal-contribution field was applied).
+  // The difference between the live value and this snapshot is however much
+  // has been committed to the goal or reserve since — via that contribution
+  // field or a manual edit — and is no longer part of the spendable weekly
+  // balance.
   goalSavedAtWeekStart: number;
   reserveSavedAtWeekStart: number;
 }

@@ -277,7 +277,6 @@ export function FloorEditModal({ show, onClose, state, refresh }: ModalBaseProps
 }
 
 export function ReserveEditModal({ show, onClose, state, refresh }: ModalBaseProps) {
-  const [pctPercent, setPctPercent] = useState(String(Math.round(state.reserve.pct * 100)));
   const [saved, setSaved] = useState(String(state.reserve.saved));
   const [withdraw, setWithdraw] = useState("");
   const [isNewMoney, setIsNewMoney] = useState(false);
@@ -288,14 +287,12 @@ export function ReserveEditModal({ show, onClose, state, refresh }: ModalBasePro
 
   async function save() {
     setErr("");
-    const pctVal = parseFloat(pctPercent);
     const savedVal = parseFloat(saved);
-    if (isNaN(pctVal) || pctVal < 0 || pctVal > 100) return setErr("% должен быть от 0 до 100");
     if (isNaN(savedVal) || savedVal < 0) return setErr("Накоплено — число от нуля");
     setBusy(true);
     try {
       const w = withdraw.trim() !== "" ? parseFloat(withdraw) : null;
-      await api.updateReserve({ pctPercent: pctVal, saved: savedVal, withdraw: w && w > 0 ? w : null, isNewMoney });
+      await api.updateReserve({ saved: savedVal, withdraw: w && w > 0 ? w : null, isNewMoney });
       await refresh();
       onClose();
     } catch (e) {
@@ -308,9 +305,7 @@ export function ReserveEditModal({ show, onClose, state, refresh }: ModalBasePro
   return (
     <Sheet show={show} onClose={onClose}>
       <SheetTitle>Подушка безопасности</SheetTitle>
-      <SheetHint>Отдельно от цели — страховка на случай простоя, а не мечта.</SheetHint>
-      <FieldLabel>% от каждого дохода — авто-отчисление</FieldLabel>
-      <DescInput type="number" placeholder="например, 5" value={pctPercent} onChange={(e) => setPctPercent(e.target.value)} />
+      <SheetHint>Отдельно от цели — страховка на случай простоя, а не мечта. Пополняется только вручную.</SheetHint>
       <FieldLabel>Накоплено сейчас (поправить вручную)</FieldLabel>
       <DescInput type="number" value={saved} onChange={(e) => setSaved(e.target.value)} />
       {savedChanged && (

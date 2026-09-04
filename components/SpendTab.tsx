@@ -146,7 +146,7 @@ export default function SpendTab({ state, refresh, showToast }: { state: AppStat
           </Tag>
           <div className="font-display font-semibold text-[22px]">{fmt(state.reserve.saved)}</div>
           <div className="text-[11.5px] mt-1" style={{ color: "var(--muted)" }}>
-            {(state.reserve.pct * 100).toFixed(0)}% с каждого дохода — авто
+            пополняется вручную — нажми, чтобы отложить
           </div>
           {committed.reserveContribution > 0 && (
             <div className="text-[11.5px] mt-1 font-semibold" style={{ color: "var(--pos)" }}>
