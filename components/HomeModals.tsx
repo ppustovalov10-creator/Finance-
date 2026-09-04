@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { api } from "@/lib/api-client";
 import { fmt } from "@/lib/format";
-import { isValidDDMMYYYY, ddmmyyyyToIso, isoToDDMMYYYY, weeksRemainingToGoal } from "@/lib/date";
+import { isValidDDMMYYYY, ddmmyyyyToIso, isoToDDMMYYYY, weeksRemainingToGoal, dateToSortable } from "@/lib/date";
 import { spentSince, suggestedFloor } from "@/lib/calc";
 import { buildReportText } from "@/lib/report";
 import type { AppState, Transaction } from "@/lib/types";
@@ -496,8 +496,10 @@ export function EditTxModal({
 }
 
 export function ReportModal({ show, onClose, state }: ModalBaseProps) {
+  const weeks = [...state.incomeLog].sort((a, b) => (dateToSortable(a.startDate) < dateToSortable(b.startDate) ? 1 : -1));
+  const [weekStartDate, setWeekStartDate] = useState(state.currentWeek.startDate);
   const [status, setStatus] = useState("");
-  const text = buildReportText(state);
+  const text = buildReportText(state, weekStartDate);
 
   async function copy() {
     try {
@@ -512,6 +514,26 @@ export function ReportModal({ show, onClose, state }: ModalBaseProps) {
     <Sheet show={show} onClose={onClose}>
       <SheetTitle>Отчёт за неделю</SheetTitle>
       <SheetHint>Скопируй текст ниже и вставь в чат с Claude или сохрани на Диск.</SheetHint>
+      {weeks.length > 1 && (
+        <>
+          <FieldLabel>Неделя</FieldLabel>
+          <select
+            value={weekStartDate}
+            onChange={(e) => {
+              setWeekStartDate(e.target.value);
+              setStatus("");
+            }}
+            className="w-full px-4 py-3 rounded-xl text-sm mb-1 outline-none"
+            style={{ background: "#fff", color: "var(--sheet-ink)", border: "1px solid var(--sheet-line)" }}
+          >
+            {weeks.map((w) => (
+              <option key={w.startDate} value={w.startDate}>
+                {w.startDate === state.currentWeek.startDate ? `${w.startDate} (текущая)` : w.startDate}
+              </option>
+            ))}
+          </select>
+        </>
+      )}
       <textarea
         readOnly
         value={text}

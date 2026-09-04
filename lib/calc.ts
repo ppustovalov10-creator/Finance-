@@ -173,6 +173,17 @@ export function spentSince(transactions: Transaction[], sinceDateStr: string): n
     .reduce((s, t) => s + Math.abs(t.amount), 0);
 }
 
+/** Same as spentSince but bounded on both ends — needed for a past week's
+ * report, where "since startDate" alone would also pull in every later
+ * week's spending. */
+export function spentBetween(transactions: Transaction[], startDateStr: string, endDateStr: string): number {
+  const startSortable = dateToSortable(startDateStr);
+  const endSortable = dateToSortable(endDateStr);
+  return transactions
+    .filter((t) => t.amount < 0 && dateToSortable(t.date) >= startSortable && dateToSortable(t.date) <= endSortable)
+    .reduce((s, t) => s + Math.abs(t.amount), 0);
+}
+
 export interface CommittedThisWeek {
   goalContribution: number;
   reserveContribution: number;
