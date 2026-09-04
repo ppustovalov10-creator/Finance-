@@ -43,6 +43,20 @@ export function lastMonday(now: Date = new Date()): string {
   return toDDMMYYYY(d);
 }
 
+/**
+ * Which Friday-anchored budget week must already have its income fixed,
+ * right now — the payday cutoff is Friday 21:00. Before that time on a
+ * Friday, last week's fixed income still counts; from that moment on
+ * (including all of Saturday through the next Thursday), this week's
+ * Friday needs its own fresh entry.
+ */
+export function requiredIncomeWeekStart(now: Date = new Date()): string {
+  const friday = lastFriday(now);
+  const [d, m, y] = friday.split(".").map(Number);
+  const cutoff = new Date(y, m - 1, d, 21, 0, 0, 0);
+  return now.getTime() >= cutoff.getTime() ? friday : addDays(friday, -7);
+}
+
 export function daysUntil(dateStr: string, now: Date = new Date()): number {
   const [d, m, y] = dateStr.split(".").map(Number);
   const target = new Date(y, m - 1, d);

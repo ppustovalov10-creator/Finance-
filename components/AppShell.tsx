@@ -4,8 +4,9 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { signOut } from "next-auth/react";
 import { api, onNewAchievements, type NewAchievement } from "@/lib/api-client";
 import type { AppState } from "@/lib/types";
-import { DOW_FULL } from "@/lib/date";
+import { DOW_FULL, dateToSortable, requiredIncomeWeekStart } from "@/lib/date";
 import Onboarding from "./Onboarding";
+import WeeklyIncomeGate from "./WeeklyIncomeGate";
 import IncomeTab from "./IncomeTab";
 import SpendTab from "./SpendTab";
 import EnvelopesTab from "./EnvelopesTab";
@@ -79,6 +80,18 @@ export default function AppShell() {
   }
 
   const now = new Date();
+
+  // Every Friday at 21:00 the app requires a fresh salary entry for that
+  // week before anything else is usable — if the cutoff already passed
+  // (whether that was minutes or days ago) and this week's Friday still
+  // has no income fixed, block the whole app behind the gate instead of
+  // just the income tab, so it can't be skipped by staying on Расход.
+  const requiredWeekStart = requiredIncomeWeekStart(now);
+  const needsIncomeFix =
+    !state.currentWeek.income || dateToSortable(state.currentWeek.startDate) < dateToSortable(requiredWeekStart);
+  if (needsIncomeFix) {
+    return <WeeklyIncomeGate state={state} refresh={refresh} requiredWeekStart={requiredWeekStart} />;
+  }
 
   return (
     <div>
