@@ -255,7 +255,6 @@ function SalaryChart({ incomeLog }: { incomeLog: AppState["incomeLog"] }) {
   if (log.length === 0) {
     return <div className="text-[11.5px] mt-1.5" style={{ color: "var(--muted)" }}>Пока нет истории — доход появится здесь после первой фиксации.</div>;
   }
-  const max = Math.max(1, ...log.map((w) => w.income));
   let hint: string;
   if (log.length >= 2) {
     const delta = log[log.length - 1].income - log[0].income;
@@ -266,24 +265,49 @@ function SalaryChart({ incomeLog }: { incomeLog: AppState["incomeLog"] }) {
   } else {
     hint = "Как накопится хотя бы 2 недели — здесь появится тренд роста.";
   }
+
+  const W = 320;
+  const H = 132;
+  const padX = 22;
+  const padTop = 26;
+  const padBottom = 22;
+  const plotW = W - padX * 2;
+  const plotH = H - padTop - padBottom;
+  const incomes = log.map((w) => w.income);
+  const min = Math.min(...incomes);
+  const max = Math.max(...incomes);
+  const range = max - min || 1;
+  const x = (i: number) => (log.length <= 1 ? W / 2 : padX + (i / (log.length - 1)) * plotW);
+  const y = (v: number) => padTop + plotH - ((v - min) / range) * plotH;
+  const points = log.map((w, i) => ({ x: x(i), y: y(w.income), w }));
+
+  const linePath = points.map((p, i) => `${i === 0 ? "M" : "L"} ${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join(" ");
+  const areaPath = `${linePath} L ${points[points.length - 1].x.toFixed(1)} ${(H - padBottom).toFixed(1)} L ${points[0].x.toFixed(1)} ${(H - padBottom).toFixed(1)} Z`;
+
   return (
     <>
-      <div className="flex items-end gap-2.5" style={{ height: 92, margin: "12px 0 4px" }}>
-        {log.map((w, i) => {
-          const pct = (w.income / max) * 100;
-          return (
-            <div key={i} className="flex-1 flex flex-col items-center justify-end h-full">
-              <div className="font-mono-num" style={{ fontSize: 9 }}>
-                {Math.round(w.income / 1000)}к
-              </div>
-              <div className="w-full rounded-t" style={{ maxWidth: 34, height: `${pct}%`, minHeight: 2, background: "var(--accent-blue)" }} />
-              <div className="font-mono-num mt-1" style={{ fontSize: "9.5px", color: "var(--muted)" }}>
-                {w.startDate.slice(0, 5)}
-              </div>
-            </div>
-          );
-        })}
-      </div>
+      <svg viewBox={`0 0 ${W} ${H}`} width="100%" height={H} style={{ display: "block", margin: "8px 0 0", overflow: "visible" }} preserveAspectRatio="none">
+        <defs>
+          <linearGradient id="salaryChartFill" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="var(--accent-blue)" stopOpacity="0.35" />
+            <stop offset="100%" stopColor="var(--accent-blue)" stopOpacity="0" />
+          </linearGradient>
+        </defs>
+        <line x1={padX} y1={H - padBottom} x2={W - padX} y2={H - padBottom} stroke="var(--line)" strokeWidth={1} vectorEffect="non-scaling-stroke" />
+        {points.length > 1 && <path d={areaPath} fill="url(#salaryChartFill)" stroke="none" />}
+        <path d={linePath} fill="none" stroke="var(--accent-blue)" strokeWidth={2} strokeLinejoin="round" strokeLinecap="round" vectorEffect="non-scaling-stroke" />
+        {points.map((p, i) => (
+          <g key={i}>
+            <circle cx={p.x} cy={p.y} r={3.5} fill="var(--accent-blue)" stroke="var(--bg)" strokeWidth={1.5} vectorEffect="non-scaling-stroke" />
+            <text x={p.x} y={p.y - 10} textAnchor="middle" className="font-mono-num" fontSize={10} fill="var(--ink)">
+              {Math.round(p.w.income / 1000)}к
+            </text>
+            <text x={p.x} y={H - 4} textAnchor="middle" className="font-mono-num" fontSize={9.5} fill="var(--muted)">
+              {p.w.startDate.slice(0, 5)}
+            </text>
+          </g>
+        ))}
+      </svg>
       <div className="text-[11.5px] mt-1.5" style={{ color: "var(--muted)" }}>
         {hint}
       </div>
