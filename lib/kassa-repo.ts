@@ -1,11 +1,11 @@
 import { pool } from "./db";
-import { isoToDDMMYYYY, ddmmyyyyToIso, lastMonday, addDays } from "./date";
+import { isoToDDMMYYYY, ddmmyyyyToIso, lastMonday, addDays, kassaEffectiveNow } from "./date";
 import { computeRequiredKassa, resolveRequiredKassa, type TeamInputs } from "./kassa";
 import type { KassaState, SalesTarget, KassaEntry } from "./kassa";
 import { checkKassaAchievements } from "./achievements-repo";
 
 export async function getKassaState(userId: string): Promise<KassaState> {
-  const weekStartDate = lastMonday();
+  const weekStartDate = lastMonday(kassaEffectiveNow());
   const weekIso = ddmmyyyyToIso(weekStartDate);
   const weekEndIso = ddmmyyyyToIso(addDays(weekStartDate, 6));
 
@@ -74,7 +74,7 @@ export async function setSalesTarget(userId: string, input: SetTargetInput): Pro
   }
   const requiredKassa = Math.round(resolveRequiredKassa(result, input.choice));
 
-  const weekIso = ddmmyyyyToIso(lastMonday());
+  const weekIso = ddmmyyyyToIso(lastMonday(kassaEffectiveNow()));
   await pool.query(
     `insert into sales_target
        (user_id, week_start_date, target_salary, failed_plan, ops_total, ops_plan, mgr_total, mgr_plan, required_kassa)

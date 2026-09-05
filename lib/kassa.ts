@@ -1,7 +1,7 @@
 // "Касса" — a personal weekly sales-commission target, independent of the
 // budget tab. Business formula is fixed company-wide (not user-configurable).
 
-import { addDays, dateToSortable, dowName, toDDMMYYYY } from "./date";
+import { addDays, dateToSortable, dowName, toDDMMYYYY, kassaEffectiveNow } from "./date";
 import { fmt } from "./format";
 
 export interface Tier {
@@ -249,7 +249,7 @@ export function calcKassaDayBreakdown(
   requiredKassa: number,
   now: Date = new Date()
 ): KassaDayInfo[] {
-  const todayStr = toDDMMYYYY(now);
+  const todayStr = toDDMMYYYY(kassaEffectiveNow(now));
   const todaySortable = dateToSortable(todayStr);
   const workDays = workingDaysOfWeek(weekStartDate);
   const totalDays = workDays.length;

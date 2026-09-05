@@ -44,6 +44,22 @@ export function lastMonday(now: Date = new Date()): string {
 }
 
 /**
+ * Касса treats a day as done at 21:00, not midnight — entering a sale at
+ * 22:00 shouldn't reopen "today"'s already-closed target, and from 21:00
+ * on, "today" for Kassa purposes should already be tomorrow. Kassa only
+ * runs Mon-Fri (see workingDaysOfWeek in lib/kassa.ts), so on a Friday
+ * evening or over the weekend this rolls straight through to the next
+ * working day/week — callers that derive "today" or "this week's Monday"
+ * for Kassa should use this instead of `now` directly.
+ */
+export function kassaEffectiveNow(now: Date = new Date()): Date {
+  if (now.getHours() < 21) return now;
+  const d = new Date(now);
+  d.setDate(d.getDate() + 1);
+  return d;
+}
+
+/**
  * Which Friday-anchored budget week must already have its income fixed,
  * right now — the payday cutoff is Friday 21:00. Before that time on a
  * Friday, last week's fixed income still counts; from that moment on
