@@ -46,16 +46,23 @@ export function lastMonday(now: Date = new Date()): string {
 /**
  * Касса treats a day as done at 21:00, not midnight — entering a sale at
  * 22:00 shouldn't reopen "today"'s already-closed target, and from 21:00
- * on, "today" for Kassa purposes should already be tomorrow. Kassa only
- * runs Mon-Fri (see workingDaysOfWeek in lib/kassa.ts), so on a Friday
- * evening or over the weekend this rolls straight through to the next
- * working day/week — callers that derive "today" or "this week's Monday"
- * for Kassa should use this instead of `now` directly.
+ * on, "today" for Kassa purposes should already be tomorrow.
+ *
+ * Kassa only runs Mon-Fri, so Friday is the last working day of its week —
+ * once Friday 21:00 passes, the week itself is over, not just the day: this
+ * jumps straight through the weekend to next Monday (not just "Saturday"),
+ * so getKassaState's week lookup finds no target yet and immediately shows
+ * next week's setup form, instead of still displaying the finished week's
+ * dashboard until Monday morning. Saturday/Sunday map to that same next
+ * Monday at any hour, since Friday's cutoff has necessarily already passed
+ * by then. Callers that derive "today" or "this week's Monday" for Kassa
+ * should use this instead of `now` directly.
  */
 export function kassaEffectiveNow(now: Date = new Date()): Date {
-  if (now.getHours() < 21) return now;
-  const d = new Date(now);
-  d.setDate(d.getDate() + 1);
+  const d = now.getHours() >= 21 ? new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1) : new Date(now);
+  while (d.getDay() === 0 || d.getDay() === 6) {
+    d.setDate(d.getDate() + 1);
+  }
   return d;
 }
 
