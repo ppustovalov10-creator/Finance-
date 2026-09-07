@@ -9,7 +9,9 @@ import {
   generateRemainingWeekdayTargets,
   generateWeekdayTargets,
   rebalanceWeekdayTargets,
+  selectedCashScenario,
   salaryTierPercent,
+  teamMotivationRows,
 } from "@/lib/cash";
 
 test("uses the configured target for each weekday instead of assuming an equal split", () => {
@@ -73,4 +75,21 @@ test("always uses the fixed 100, 125, and 150 percent scenarios", () => {
 test("clamps a passed or sub-week goal horizon to one week", () => {
   const [option] = cashScenarioOptions({ today: "07.09.2026", goal: { target: 25_000, saved: 5_000, deadlineDate: "08.09.2026" }, envelopes: [], salary: { failedPlan: true, opsTotal: 0, opsPlan: 0, managersTotal: 0, managersPlan: 0 } });
   assert.equal(option.weeks, 1); assert.equal(option.goalContribution, 20_000);
+});
+
+test("identifies the selected scenario and leaves custom goals selectable", () => {
+  const options = [
+    { name: "Минималка", weeklyCash: 100 },
+    { name: "Средний", weeklyCash: 125 },
+    { name: "Герой-красавчик", weeklyCash: 150 },
+  ];
+  assert.equal(selectedCashScenario(options, 125)?.name, "Средний");
+  assert.equal(selectedCashScenario(options, 130), undefined);
+});
+
+test("lists the operator and manager bonuses used in the salary calculation", () => {
+  assert.deepEqual(teamMotivationRows(), [
+    { role: "Операторы", perPerson: 500, perPlan: 500 },
+    { role: "Менеджеры", perPerson: 1_000, perPlan: 1_000 },
+  ]);
 });

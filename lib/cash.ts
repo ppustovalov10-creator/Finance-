@@ -107,6 +107,13 @@ export interface SalaryInput {
   managersPlan: number;
 }
 
+export function teamMotivationRows() {
+  return [
+    { role: "Операторы", perPerson: 500, perPlan: 500 },
+    { role: "Менеджеры", perPerson: 1_000, perPlan: 1_000 },
+  ];
+}
+
 export function calculateSalary(input: SalaryInput): number {
   const opsPlan = Math.min(Math.max(0, input.opsPlan), Math.max(0, input.opsTotal));
   const managersPlan = Math.min(Math.max(0, input.managersPlan), Math.max(0, input.managersTotal));
@@ -125,6 +132,10 @@ export interface CashScenarioOption {
   name: "Минималка" | "Средний" | "Герой-красавчик";
   multiplier: number; weeklyCash: number; minimumWeeklyCash: number; mandatoryWeekly: number;
   goalContribution: number; weeks: number; completionDate: string | null;
+}
+
+export function selectedCashScenario<T extends { weeklyCash: number }>(options: T[], weeklyTarget: number): T | undefined {
+  return options.find((option) => option.weeklyCash === weeklyTarget);
 }
 
 export function cashScenarioOptions(input: { today: string; goal: { target: number; saved: number; deadlineDate: string | null }; envelopes: { weeklyCap: number | null; isRegular: boolean }[]; salary: Omit<SalaryInput, "weeklyCash"> }): CashScenarioOption[] {

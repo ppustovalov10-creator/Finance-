@@ -639,8 +639,8 @@ export async function deleteCashEntry(userId: string, id: string) {
 export async function updateCashSettings(userId: string, input: CashSettings) {
   if (input.opsPlan > input.opsTotal || input.managersPlan > input.managersTotal) throw new Error("Выполнено не может быть больше общего количества");
   await pool.query(
-    `insert into cash_settings (user_id, weekly_target, weekday_targets, failed_plan, ops_total, ops_plan, managers_total, managers_plan)
-     values ($1, $2, $3, $4, $5, $6, $7, $8)
+    `insert into cash_settings (user_id, weekly_target, weekday_targets, failed_plan, ops_total, ops_plan, managers_total, managers_plan, scenario_multipliers)
+     values ($1, $2, $3, $4, $5, $6, $7, $8, $9)
      on conflict (user_id) do update set weekly_target = excluded.weekly_target, weekday_targets = excluded.weekday_targets,
        failed_plan = excluded.failed_plan, ops_total = excluded.ops_total, ops_plan = excluded.ops_plan,
        managers_total = excluded.managers_total, managers_plan = excluded.managers_plan, scenario_multipliers = excluded.scenario_multipliers, updated_at = now()`,
