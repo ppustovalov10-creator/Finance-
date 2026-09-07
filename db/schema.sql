@@ -62,6 +62,14 @@ create table if not exists transactions (
 );
 create index if not exists transactions_user_date_idx on transactions(user_id, date);
 
+-- Надёжная интеграция: одна внешняя операция может быть записана только раз.
+-- ALTER нужен и для уже развёрнутых баз, созданных до появления интеграции.
+alter table transactions add column if not exists external_source text;
+alter table transactions add column if not exists external_id text;
+create unique index if not exists transactions_external_operation_idx
+  on transactions(user_id, external_source, external_id)
+  where external_source is not null and external_id is not null;
+
 create table if not exists envelopes (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references users(id) on delete cascade,
