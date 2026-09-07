@@ -70,6 +70,16 @@ create unique index if not exists transactions_external_operation_idx
   on transactions(user_id, external_source, external_id)
   where external_source is not null and external_id is not null;
 
+create table if not exists integration_events (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references users(id) on delete cascade,
+  source text not null,
+  external_id text not null,
+  event_type text not null,
+  created_at timestamptz not null default now(),
+  unique (user_id, source, external_id, event_type)
+);
+
 create table if not exists envelopes (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references users(id) on delete cascade,
