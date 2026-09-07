@@ -46,7 +46,7 @@ export async function getAppState(userId: string): Promise<AppState> {
       "select category_name, keyword from category_keywords where user_id = $1 order by created_at asc",
       [userId]
     ),
-    pool.query("select weekly_target, weekday_targets, failed_plan, ops_total, ops_plan, managers_total, managers_plan from cash_settings where user_id = $1", [userId]),
+    pool.query("select weekly_target, weekday_targets, failed_plan, ops_total, ops_plan, managers_total, managers_plan, scenario_multipliers from cash_settings where user_id = $1", [userId]),
     pool.query("select id, date, amount from cash_entries where user_id = $1 order by created_at asc", [userId]),
   ]);
 
@@ -126,6 +126,7 @@ export async function getAppState(userId: string): Promise<AppState> {
     opsPlan: settingsRow ? Number(settingsRow.ops_plan) : 0,
     managersTotal: settingsRow ? Number(settingsRow.managers_total) : 0,
     managersPlan: settingsRow ? Number(settingsRow.managers_plan) : 0,
+    scenarioMultipliers: (settingsRow?.scenario_multipliers || [1, 1.25, 1.5]) as [number, number, number],
   };
   const cashEntries: CashEntry[] = cashEntriesRes.rows.map((r) => ({ id: r.id, date: isoToDDMMYYYY(r.date), amount: Number(r.amount) }));
 
@@ -627,6 +628,14 @@ export async function addExternalCashEntry(
   });
 }
 
+export async function updateCashEntry(userId: string, id: string, input: { date: string; amount: number }) {
+  await pool.query("update cash_entries set date = $3, amount = $4 where user_id = $1 and id = $2", [userId, id, ddmmyyyyToIso(input.date), input.amount]);
+}
+
+export async function deleteCashEntry(userId: string, id: string) {
+  await pool.query("delete from cash_entries where user_id = $1 and id = $2", [userId, id]);
+}
+
 export async function updateCashSettings(userId: string, input: CashSettings) {
   if (input.opsPlan > input.opsTotal || input.managersPlan > input.managersTotal) throw new Error("Выполнено не может быть больше общего количества");
   await pool.query(
@@ -634,7 +643,7 @@ export async function updateCashSettings(userId: string, input: CashSettings) {
      values ($1, $2, $3, $4, $5, $6, $7, $8)
      on conflict (user_id) do update set weekly_target = excluded.weekly_target, weekday_targets = excluded.weekday_targets,
        failed_plan = excluded.failed_plan, ops_total = excluded.ops_total, ops_plan = excluded.ops_plan,
-       managers_total = excluded.managers_total, managers_plan = excluded.managers_plan, updated_at = now()`,
-    [userId, input.weeklyTarget, JSON.stringify(input.weekdayTargets), input.failedPlan, input.opsTotal, input.opsPlan, input.managersTotal, input.managersPlan]
+       managers_total = excluded.managers_total, managers_plan = excluded.managers_plan, scenario_multipliers = excluded.scenario_multipliers, updated_at = now()`,
+    [userId, input.weeklyTarget, JSON.stringify(input.weekdayTargets), input.failedPlan, input.opsTotal, input.opsPlan, input.managersTotal, input.managersPlan, JSON.stringify(input.scenarioMultipliers)]
   );
 }

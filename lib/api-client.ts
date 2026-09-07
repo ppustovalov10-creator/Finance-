@@ -16,6 +16,8 @@ async function call<T>(url: string, method: string, body?: unknown): Promise<T> 
 export const api = {
   getState: () => call<AppState>("/api/state", "GET"),
   addCash: (b: { date: string; amount: number }) => call<{ id: string }>("/api/cash", "POST", b),
+  updateCash: (id: string, b: { date: string; amount: number }) => call(`/api/cash/${id}`, "PUT", b),
+  deleteCash: (id: string) => call(`/api/cash/${id}`, "DELETE"),
   updateCashSettings: (b: AppState["cashSettings"]) => call("/api/cash/settings", "PUT", b),
   fixIncome: (b: { dateVal: string; incomeVal: number; carryInVal: number; goalSavedVal: number }) =>
     call("/api/income", "POST", b),

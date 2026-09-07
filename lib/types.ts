@@ -67,6 +67,7 @@ export interface CashSettings {
   opsPlan: number;
   managersTotal: number;
   managersPlan: number;
+  scenarioMultipliers: [number, number, number];
 }
 
 export interface AppState {

@@ -127,8 +127,11 @@ create table if not exists cash_settings (
   ops_plan integer not null default 0 check (ops_plan >= 0 and ops_plan <= ops_total),
   managers_total integer not null default 0 check (managers_total >= 0),
   managers_plan integer not null default 0 check (managers_plan >= 0 and managers_plan <= managers_total),
+  scenario_multipliers jsonb not null default '[1,1.25,1.5]'::jsonb,
   updated_at timestamptz not null default now()
 );
+
+alter table cash_settings add column if not exists scenario_multipliers jsonb not null default '[1,1.25,1.5]'::jsonb;
 
 create table if not exists cash_entries (
   id uuid primary key default gen_random_uuid(),
