@@ -32,6 +32,7 @@ export default function CashTab({ state, refresh, showToast }: { state: AppState
   const salary = calculateSalary({ weeklyCash: week.weeklyTotal, ...settings });
   const salaryTarget = calculateSalary({ weeklyCash: settings.weeklyTarget, ...settings });
   const progress = calcCashProgress({ weeklyCash: week.weeklyTotal, weeklyTarget: settings.weeklyTarget, salary, salaryTarget });
+  const goalPercent = state.goal.target > 0 ? Math.min(100, Math.round(state.goal.saved / state.goal.target * 100)) : 0;
 
   async function choose(weeklyTarget: number) {
     await api.updateCashSettings({ ...settings, weeklyTarget, weekdayTargets: generateRemainingWeekdayTargets(weeklyTarget, today) });
@@ -55,9 +56,10 @@ export default function CashTab({ state, refresh, showToast }: { state: AppState
       </div>
     </header>
 
-    <button onClick={() => setShowGoal(true)} className="w-full rounded-3xl p-4 text-left" style={cardStyle}>
-      <div className="flex items-start justify-between gap-4"><div><p className="m-0 text-[10px] font-bold uppercase tracking-[0.18em]" style={{ color: "var(--muted)" }}>Личная цель</p><strong className="mt-1 block text-base">{state.goal.target > 0 ? state.goal.name : "Настроить цель"}</strong></div><span className="text-xs font-bold" style={{ color: "var(--accent-blue)" }}>Изменить</span></div>
-      {state.goal.target > 0 ? <p className="mt-2 mb-0 text-xs" style={{ color: "var(--muted)" }}>{fmt(state.goal.saved)} из {fmt(state.goal.target)} · до {state.goal.deadlineDate || "дедлайн не задан"}</p> : <p className="mt-2 mb-0 text-xs" style={{ color: "var(--muted)" }}>Сумма и дедлайн определяют критерий зарплаты вместе с обязательными конвертами.</p>}
+    <button onClick={() => setShowGoal(true)} className="relative w-full overflow-hidden rounded-3xl p-4 text-left" style={cardStyle}>
+      <span className="absolute inset-y-0 left-0 transition-all" style={{ width: `${goalPercent}%`, background: "linear-gradient(90deg, rgba(111,207,123,.30), rgba(111,207,123,.08))" }} />
+      <div className="relative flex items-start justify-between gap-4"><div><p className="m-0 text-[10px] font-bold uppercase tracking-[0.18em]" style={{ color: "var(--muted)" }}>Личная цель</p><strong className="mt-1 block text-base">{state.goal.target > 0 ? state.goal.name : "Настроить цель"}</strong></div><span className="text-xs font-bold" style={{ color: "var(--accent-blue)" }}>{state.goal.target > 0 ? `${goalPercent}% · Изменить` : "Изменить"}</span></div>
+      {state.goal.target > 0 ? <p className="relative mt-2 mb-0 text-xs" style={{ color: "var(--muted)" }}>{fmt(state.goal.saved)} из {fmt(state.goal.target)} · до {state.goal.deadlineDate || "дедлайн не задан"}</p> : <p className="relative mt-2 mb-0 text-xs" style={{ color: "var(--muted)" }}>Сумма и дедлайн определяют критерий зарплаты вместе с обязательными конвертами.</p>}
     </button>
 
     <section className="rounded-3xl p-4" style={cardStyle} aria-label="Прогресс кассы за неделю">

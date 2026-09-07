@@ -173,6 +173,12 @@ export function spentSince(transactions: Transaction[], sinceDateStr: string): n
     .reduce((s, t) => s + Math.abs(t.amount), 0);
 }
 
+export function parseMoneyInput(value: string): number {
+  const normalized = value.replace(/[^0-9,.-]/g, "").replace(",", ".");
+  const amount = Number(normalized);
+  return Number.isFinite(amount) ? amount : 0;
+}
+
 /** Returns transactions from the selected weekly period, including both boundaries. */
 export function transactionsInWeek(transactions: Transaction[], weekStartDate: string): Transaction[] {
   const start = dateToSortable(weekStartDate);

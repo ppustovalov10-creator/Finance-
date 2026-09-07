@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { api } from "@/lib/api-client";
-import { transactionsInWeek } from "@/lib/calc";
+import { parseMoneyInput, transactionsInWeek } from "@/lib/calc";
 import { toDDMMYYYY, dateToSortable } from "@/lib/date";
 import { fmt } from "@/lib/format";
 import { weeklyCapsOf } from "@/lib/types";
@@ -30,7 +30,7 @@ export default function ExpenseTab({ state, refresh, showToast }: { state: AppSt
 
   async function save(event: React.FormEvent) {
     event.preventDefault();
-    const value = Number(amount);
+    const value = parseMoneyInput(amount);
     if (value <= 0 || !desc.trim()) return setError("Заполни сумму и назначение");
     try {
       const result = await api.addTransaction({ amount: -value, desc: desc.trim(), dateStr: toDDMMYYYY(new Date()) });
@@ -56,12 +56,12 @@ export default function ExpenseTab({ state, refresh, showToast }: { state: AppSt
       <div className="rounded-2xl p-4" style={cardStyle}><span className="block text-[10px] font-bold uppercase tracking-[0.16em]" style={{ color: "var(--muted)" }}>Потрачено за неделю</span><b className="font-display mt-1 block text-xl" style={{ color: "var(--danger)" }}>{fmt(-spent)}</b></div>
     </section>
 
-    <form onSubmit={save} className="mt-4 rounded-2xl p-4" style={cardStyle}>
-      <b className="text-sm">Добавить расход</b>
-      <label className="mt-3 block text-sm">Сколько потрачено<input aria-label="Сколько потрачено" type="number" min="0" value={amount} onChange={(event) => setAmount(event.target.value)} className="mt-1 block w-full rounded-xl p-3" style={{ background: "var(--panel)", border: "1px solid var(--border)" }} /></label>
-      <label className="mt-3 block text-sm">На что<input aria-label="На что" value={desc} onChange={(event) => setDesc(event.target.value)} className="mt-1 block w-full rounded-xl p-3" style={{ background: "var(--panel)", border: "1px solid var(--border)" }} /></label>
-      {error && <p className="mb-0 text-sm text-red-500">{error}</p>}
-      <button className="mt-3 rounded-xl px-4 py-2 text-sm font-bold" style={{ background: "var(--accent-blue)", color: "#fff" }}>Сохранить</button>
+    <form onSubmit={save} className="mt-4 rounded-3xl p-4" style={cardStyle}>
+      <div className="flex items-center justify-between"><b className="text-sm">Добавить расход</b><span className="text-[11px]" style={{ color: "var(--muted)" }}>в эту неделю</span></div>
+      <label className="mt-4 block text-[11px] font-bold uppercase tracking-wide" style={{ color: "var(--muted)" }}>Сколько потрачено<div className="relative mt-1"><input aria-label="Сколько потрачено" inputMode="decimal" placeholder="0" value={amount} onChange={(event) => { setAmount(event.target.value); if (error) setError(""); }} className="block w-full rounded-2xl px-4 py-3 pr-10 text-lg font-bold outline-none" style={{ background: "var(--panel)", border: `1px solid ${error ? "var(--danger)" : "var(--border)"}` }} /><span className="absolute right-4 top-1/2 -translate-y-1/2 text-sm font-bold" style={{ color: "var(--muted)" }}>₽</span></div></label>
+      {error && <p className="mt-2 mb-0 text-xs" style={{ color: "var(--danger)" }}>{error}</p>}
+      <label className="mt-4 block text-[11px] font-bold uppercase tracking-wide" style={{ color: "var(--muted)" }}>На что<input aria-label="На что" placeholder="Например, обед" value={desc} onChange={(event) => { setDesc(event.target.value); if (error) setError(""); }} className="mt-1 block w-full rounded-2xl p-3 outline-none" style={{ background: "var(--panel)", border: "1px solid var(--border)" }} /></label>
+      <button className="mt-4 w-full rounded-2xl py-3 text-sm font-bold" style={{ background: "var(--accent-blue)", color: "#fff" }}>Сохранить расход</button>
     </form>
 
     <section className="mt-7" aria-labelledby="spent-heading">
