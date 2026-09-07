@@ -8,6 +8,7 @@ import {
   dailyCashTarget,
   generateRemainingWeekdayTargets,
   generateWeekdayTargets,
+  rebalanceWeekdayTargets,
   salaryTierPercent,
 } from "@/lib/cash";
 
@@ -24,6 +25,11 @@ test("generates a five-day distribution whose sum equals a new weekly target", (
 test("allocates a selected weekly target only over remaining weekdays", () => {
   assert.deepEqual(generateRemainingWeekdayTargets(12_500, "09.09.2026"), { mon: 0, tue: 0, wed: 4_167, thu: 4_167, fri: 4_166 });
   assert.deepEqual(generateRemainingWeekdayTargets(12_500, "12.09.2026"), { mon: 0, tue: 0, wed: 0, thu: 0, fri: 0 });
+});
+
+test("rebalances later weekdays after a cash result above or below plan", () => {
+  assert.deepEqual(rebalanceWeekdayTargets(1_000, [{ id: "mon", date: "07.09.2026", amount: 300 }], "07.09.2026"), { mon: 200, tue: 175, wed: 175, thu: 175, fri: 175 });
+  assert.deepEqual(rebalanceWeekdayTargets(1_000, [{ id: "mon", date: "07.09.2026", amount: 100 }], "07.09.2026"), { mon: 200, tue: 225, wed: 225, thu: 225, fri: 225 });
 });
 
 test("aggregates cash entries by day and only includes the requested Monday-Friday week", () => {
@@ -49,21 +55,22 @@ test("calculates tier commission and all team bonuses", () => {
   assert.equal(calculateSalary({ weeklyCash: 100_000, failedPlan: true, opsTotal: 0, opsPlan: 0, managersTotal: 0, managersPlan: 0 }), 5_000);
 });
 
-test("uses editable percentage scenarios over the lowest required weekly cash", () => {
+test("always uses the fixed 100, 125, and 150 percent scenarios", () => {
   const options = cashScenarioOptions({
     today: "07.09.2026", goal: { target: 130_000, saved: 10_000, deadlineDate: "05.10.2026" },
     envelopes: [{ weeklyCap: 8_000, isRegular: true }, { weeklyCap: 4_000, isRegular: false }, { weeklyCap: 7_000, isRegular: true }],
-    salary: { failedPlan: false, opsTotal: 2, opsPlan: 1, managersTotal: 1, managersPlan: 0 }, multipliers: [1, 1.25, 1.5],
+    salary: { failedPlan: false, opsTotal: 2, opsPlan: 1, managersTotal: 1, managersPlan: 0 },
   });
   assert.deepEqual(options.map((option) => option.name), ["Минималка", "Средний", "Герой-красавчик"]);
   const required = 15_000 + 30_000;
   assert.ok(calculateSalary({ weeklyCash: options[0].minimumWeeklyCash, failedPlan: false, opsTotal: 2, opsPlan: 1, managersTotal: 1, managersPlan: 0 }) >= required);
   assert.ok(calculateSalary({ weeklyCash: options[0].minimumWeeklyCash - 1, failedPlan: false, opsTotal: 2, opsPlan: 1, managersTotal: 1, managersPlan: 0 }) < required);
+  assert.deepEqual(options.map((option) => option.multiplier), [1, 1.25, 1.5]);
   assert.deepEqual(options.map((option) => option.weeklyCash), [options[0].minimumWeeklyCash, Math.ceil(options[0].minimumWeeklyCash * 1.25), Math.ceil(options[0].minimumWeeklyCash * 1.5)]);
   assert.equal(options[0].completionDate, "05.10.2026");
 });
 
 test("clamps a passed or sub-week goal horizon to one week", () => {
-  const [option] = cashScenarioOptions({ today: "07.09.2026", goal: { target: 25_000, saved: 5_000, deadlineDate: "08.09.2026" }, envelopes: [], salary: { failedPlan: true, opsTotal: 0, opsPlan: 0, managersTotal: 0, managersPlan: 0 }, multipliers: [1] });
+  const [option] = cashScenarioOptions({ today: "07.09.2026", goal: { target: 25_000, saved: 5_000, deadlineDate: "08.09.2026" }, envelopes: [], salary: { failedPlan: true, opsTotal: 0, opsPlan: 0, managersTotal: 0, managersPlan: 0 } });
   assert.equal(option.weeks, 1); assert.equal(option.goalContribution, 20_000);
 });

@@ -32,6 +32,27 @@ export function generateRemainingWeekdayTargets(weeklyTarget: number, today: str
   return result;
 }
 
+/** Keep today's planned amount, then carry the actual result into later weekdays. */
+export function rebalanceWeekdayTargets(weeklyTarget: number, entries: CashEntryLike[], today: string): WeekdayTargets {
+  const todayIndex = WEEKDAY_KEYS.indexOf(KEY_BY_DOW[dowName(today)]);
+  if (todayIndex < 0) return { mon: 0, tue: 0, wed: 0, thu: 0, fri: 0 };
+  const week = aggregateCashWeek(entries, cashWeekStart(today));
+  const result: WeekdayTargets = { mon: 0, tue: 0, wed: 0, thu: 0, fri: 0 };
+  const total = Math.max(0, Math.round(weeklyTarget));
+  const priorCash = week.days.slice(0, todayIndex).reduce((sum, day) => sum + day.amount, 0);
+  assignTargets(result, WEEKDAY_KEYS.slice(todayIndex), Math.max(0, total - priorCash));
+  const cashThroughToday = priorCash + week.days[todayIndex].amount;
+  assignTargets(result, WEEKDAY_KEYS.slice(todayIndex + 1), Math.max(0, total - cashThroughToday));
+  return result;
+}
+
+function assignTargets(targets: WeekdayTargets, keys: WeekdayKey[], total: number) {
+  if (!keys.length) return;
+  const base = Math.floor(total / keys.length);
+  let remainder = total - base * keys.length;
+  for (const key of keys) { targets[key] = base + (remainder > 0 ? 1 : 0); remainder -= 1; }
+}
+
 export function dailyCashTarget(targets: WeekdayTargets, date: string): number {
   return targets[KEY_BY_DOW[dowName(date)]] || 0;
 }
@@ -106,7 +127,7 @@ export interface CashScenarioOption {
   goalContribution: number; weeks: number; completionDate: string | null;
 }
 
-export function cashScenarioOptions(input: { today: string; goal: { target: number; saved: number; deadlineDate: string | null }; envelopes: { weeklyCap: number | null; isRegular: boolean }[]; salary: Omit<SalaryInput, "weeklyCash">; multipliers: number[] }): CashScenarioOption[] {
+export function cashScenarioOptions(input: { today: string; goal: { target: number; saved: number; deadlineDate: string | null }; envelopes: { weeklyCap: number | null; isRegular: boolean }[]; salary: Omit<SalaryInput, "weeklyCash"> }): CashScenarioOption[] {
   const mandatoryWeekly = input.envelopes.reduce((sum, envelope) => sum + (envelope.isRegular && envelope.weeklyCap != null ? Math.max(0, envelope.weeklyCap) : 0), 0);
   const goalLeft = Math.max(0, input.goal.target - input.goal.saved);
   const deadlineDays = input.goal.deadlineDate ? Math.max(0, daysBetween(input.today, input.goal.deadlineDate)) : 7;
@@ -114,8 +135,7 @@ export function cashScenarioOptions(input: { today: string; goal: { target: numb
   const goalContribution = goalLeft / weeks;
   const minimumWeeklyCash = lowestCashForSalary(mandatoryWeekly + goalContribution, input.salary);
   const labels: CashScenarioOption["name"][] = ["Минималка", "Средний", "Герой-красавчик"];
-  return input.multipliers.slice(0, 3).map((rawMultiplier, index) => {
-    const multiplier = Math.max(0, Number.isFinite(rawMultiplier) ? rawMultiplier : 1);
+  return [1, 1.25, 1.5].map((multiplier, index) => {
     const completionWeeks = multiplier > 0 ? weeks / multiplier : Infinity;
     return { name: labels[index], multiplier, weeklyCash: Math.ceil(minimumWeeklyCash * multiplier), minimumWeeklyCash, mandatoryWeekly, goalContribution, weeks, completionDate: input.goal.deadlineDate && Number.isFinite(completionWeeks) ? addDays(input.today, Math.ceil(completionWeeks * 7)) : null };
   });
