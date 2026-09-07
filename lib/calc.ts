@@ -173,11 +173,20 @@ export function spentSince(transactions: Transaction[], sinceDateStr: string): n
     .reduce((s, t) => s + Math.abs(t.amount), 0);
 }
 
+/** Returns transactions from the selected weekly period, including both boundaries. */
+export function transactionsInWeek(transactions: Transaction[], weekStartDate: string): Transaction[] {
+  const start = dateToSortable(weekStartDate);
+  const end = dateToSortable(addDays(weekStartDate, 6));
+  return transactions.filter((transaction) => {
+    const date = dateToSortable(transaction.date);
+    return date >= start && date <= end;
+  });
+}
+
 export function categoryTotalsThisWeek(state: AppState): Record<string, number> {
-  const sortable = dateToSortable(state.currentWeek.startDate);
   const byCat: Record<string, number> = {};
-  state.transactions.forEach((t) => {
-    if (t.amount < 0 && dateToSortable(t.date) >= sortable) {
+  transactionsInWeek(state.transactions, state.currentWeek.startDate).forEach((t) => {
+    if (t.amount < 0) {
       byCat[t.cat] = (byCat[t.cat] || 0) + Math.abs(t.amount);
     }
   });

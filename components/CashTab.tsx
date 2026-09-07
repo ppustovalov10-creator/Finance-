@@ -62,11 +62,13 @@ export default function CashTab({ state, refresh, showToast }: { state: AppState
         <span className="rounded-full px-2.5 py-1 text-xs font-bold" style={{ background: "rgba(47, 111, 237, 0.18)", color: "#8bb4ff" }}>{progress.cashPercent}%</span>
       </div>
       <div className="mt-4"><ProgressMeter value={progress.cashPercent} color="var(--accent-blue)" /></div>
+      <p className="mt-2 mb-0 text-xs" style={{ color: "var(--muted)" }}>Выполнение кассы: <b style={{ color: "var(--ink)" }}>{progress.cashPercent}%</b></p>
       <div className="mt-5 flex items-end justify-between gap-4">
         <div><p className="m-0 text-[10px] font-bold uppercase tracking-[0.18em]" style={{ color: "var(--muted)" }}>Оценка зарплаты</p><strong className="font-display mt-1 block text-xl leading-none tracking-[-0.03em]">{fmt(salary)}</strong></div>
         <div className="text-right"><span className="block text-xs" style={{ color: "var(--muted)" }}>от цели {fmt(salaryTarget)}</span><button onClick={() => setShowMotivation(true)} className="mt-1 border-none bg-transparent p-0 text-xs font-bold" style={{ color: "var(--accent-blue)" }}>Мотивация</button></div>
       </div>
       <div className="mt-3"><ProgressMeter value={progress.salaryPercent} color="var(--accent)" /></div>
+      <p className="mt-2 mb-0 text-xs" style={{ color: "var(--muted)" }}>Прогресс к зарплате: <b style={{ color: "var(--ink)" }}>{progress.salaryPercent}%</b></p>
     </section>
 
     <section className="mt-6" aria-labelledby="weekday-heading">
