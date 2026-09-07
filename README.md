@@ -43,6 +43,32 @@ TypeScript + Tailwind CSS, Postgres, email/password-аутентификация
    `DATABASE_URL`, `AUTH_SECRET`, `NEXTAUTH_URL` (URL продакшн-домена).
 4. Деплой.
 
+## Интеграция Hermes
+
+Интеграция предназначена для доверенного ассистента и не использует пароль пользователя.
+
+1. Выполни актуальный `db/schema.sql` в Supabase SQL Editor. Он добавит безопасные поля
+   внешней операции и уникальный индекс, который не допускает дублей.
+2. В Vercel → Project → Settings → Environment Variables добавь только для сервера:
+   - `HERMES_SYNC_TOKEN` — случайная строка, например результат `openssl rand -hex 32`;
+   - `HERMES_SYNC_USER_ID` — UUID пользователя из таблицы `users`.
+   Не используй префикс `NEXT_PUBLIC_` и не отправляй эти значения в браузер.
+3. После деплоя доступны следующие маршруты с заголовком
+   `Authorization: Bearer <HERMES_SYNC_TOKEN>`:
+   - `GET /api/integrations/hermes/state` — текущее состояние бюджета;
+   - `POST /api/integrations/hermes/transactions` — расход. Тело запроса:
+     ```json
+     {
+       "amount": 500,
+       "description": "Такси до дома",
+       "date": "07.09.2026",
+       "externalId": "telegram:chat-id:message-id"
+     }
+     ```
+
+Повторная отправка одинакового `externalId` не создаёт вторую операцию: маршрут
+вернёт существующую запись с `created: false`.
+
 ## Структура
 
 - `lib/categories.ts`, `lib/date.ts`, `lib/format.ts`, `lib/categorize.ts`,

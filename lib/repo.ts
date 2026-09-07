@@ -341,6 +341,35 @@ export async function addTransaction(
   return { id: res.rows[0].id as string, cat };
 }
 
+export async function addExternalTransaction(
+  userId: string,
+  input: { amount: number; desc: string; dateStr: string; externalSource: string; externalId: string }
+) {
+  const state = await getAppState(userId);
+  const cat = categorize(input.desc, state.customKeywords);
+  const iso = ddmmyyyyToIso(input.dateStr);
+  const inserted = await pool.query(
+    `insert into transactions (user_id, date, category, description, amount, external_source, external_id)
+     values ($1, $2, $3, $4, $5, $6, $7)
+     on conflict (user_id, external_source, external_id)
+       where external_source is not null and external_id is not null
+       do nothing
+     returning id, category`,
+    [userId, iso, cat, input.desc || "без описания", -Math.abs(input.amount), input.externalSource, input.externalId]
+  );
+  if (inserted.rows.length > 0) {
+    return { id: inserted.rows[0].id as string, cat: inserted.rows[0].category as string, created: true };
+  }
+
+  const existing = await pool.query(
+    `select id, category from transactions
+     where user_id = $1 and external_source = $2 and external_id = $3`,
+    [userId, input.externalSource, input.externalId]
+  );
+  if (existing.rows.length === 0) throw new Error("Не удалось найти существующую внешнюю операцию");
+  return { id: existing.rows[0].id as string, cat: existing.rows[0].category as string, created: false };
+}
+
 export async function updateTransaction(
   userId: string,
   txId: string,
