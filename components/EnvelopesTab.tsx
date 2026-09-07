@@ -5,7 +5,7 @@ import type { AppState, Transaction } from "@/lib/types";
 import { weeklyCapsOf, irregularCategoriesOf } from "@/lib/types";
 import { fmt } from "@/lib/format";
 import { dateToSortable } from "@/lib/date";
-import { envelopeCategoriesForView } from "@/lib/calc";
+import { envelopeCategoriesForView, transactionsInWeek } from "@/lib/calc";
 import { iconKeyFor } from "@/lib/categories";
 import { IconBadge } from "./Icon";
 import { EnvNewModal, EnvEditModal, RulesModal } from "./EnvelopeModals";
@@ -15,8 +15,7 @@ import type { Refresh, ShowToast } from "./AppShell";
 
 export default function EnvelopesTab({ state, refresh, showToast }: { state: AppState; refresh: Refresh; showToast: ShowToast }) {
   const week = state.currentWeek;
-  const weekStartSortable = dateToSortable(week.startDate);
-  const thisWeekTx = state.transactions.filter((t) => dateToSortable(t.date) >= weekStartSortable);
+  const thisWeekTx = transactionsInWeek(state.transactions, week.startDate);
   const totalSpent = thisWeekTx.filter((t) => t.amount < 0).reduce((s, t) => s + Math.abs(t.amount), 0);
   const caps = weeklyCapsOf(state.envelopes);
   const irregular = irregularCategoriesOf(state.envelopes);

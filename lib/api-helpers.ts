@@ -1,11 +1,11 @@
 import { NextResponse } from "next/server";
 import { requireUserId, UnauthorizedError } from "./require-user";
 
-export function withUser<T>(handler: (userId: string, req: Request) => Promise<T>) {
-  return async (req: Request) => {
+export function withUser<T, C = unknown>(handler: (userId: string, req: Request, context: C) => Promise<T>) {
+  return async (req: Request, context: C) => {
     try {
       const userId = await requireUserId();
-      const result = await handler(userId, req);
+      const result = await handler(userId, req, context);
       if (result instanceof NextResponse) return result;
       return NextResponse.json(result ?? { ok: true });
     } catch (e) {

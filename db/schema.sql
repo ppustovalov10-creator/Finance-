@@ -116,3 +116,28 @@ create table if not exists reserve_log (
   created_at timestamptz not null default now()
 );
 create index if not exists reserve_log_user_idx on reserve_log(user_id, created_at);
+
+-- Additive cash tracker: deliberately separate from spending transactions.
+create table if not exists cash_settings (
+  user_id uuid primary key references users(id) on delete cascade,
+  weekly_target numeric not null default 0,
+  weekday_targets jsonb not null default '{"mon":0,"tue":0,"wed":0,"thu":0,"fri":0}'::jsonb,
+  failed_plan boolean not null default false,
+  ops_total integer not null default 0 check (ops_total >= 0),
+  ops_plan integer not null default 0 check (ops_plan >= 0 and ops_plan <= ops_total),
+  managers_total integer not null default 0 check (managers_total >= 0),
+  managers_plan integer not null default 0 check (managers_plan >= 0 and managers_plan <= managers_total),
+  scenario_multipliers jsonb not null default '[1,1.25,1.5]'::jsonb,
+  updated_at timestamptz not null default now()
+);
+
+alter table cash_settings add column if not exists scenario_multipliers jsonb not null default '[1,1.25,1.5]'::jsonb;
+
+create table if not exists cash_entries (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references users(id) on delete cascade,
+  date date not null,
+  amount numeric not null check (amount > 0),
+  created_at timestamptz not null default now()
+);
+create index if not exists cash_entries_user_date_idx on cash_entries(user_id, date);
