@@ -179,64 +179,73 @@ interface FixIncomeInput {
   goalSavedVal: number;
 }
 
-export async function fixWeeklyIncome(userId: string, input: FixIncomeInput) {
+async function fixWeeklyIncomeWithClient(client: DbClient, userId: string, input: FixIncomeInput) {
   const iso = ddmmyyyyToIso(input.dateVal);
+  // planned contribution needs the state as of *before* this fixation
+  const state = await getAppState(userId);
+  const plannedContribution =
+    state.goal.target > 0
+      ? Math.max(0, state.goal.target - state.goal.saved) /
+        weeksRemainingToGoal(state.currentWeek.startDate, state.goal.deadlineDate)
+      : 0;
 
-  return withTransaction(async (client) => {
-    // planned contribution needs the state as of *before* this fixation
-    const state = await getAppState(userId);
-    const plannedContribution =
-      state.goal.target > 0
-        ? Math.max(0, state.goal.target - state.goal.saved) /
-          weeksRemainingToGoal(state.currentWeek.startDate, state.goal.deadlineDate)
-        : 0;
+  await client.query(
+    `insert into weekly_incomes (user_id, week_start_date, income, carry_in)
+     values ($1, $2, $3, $4)
+     on conflict (user_id, week_start_date) do update set income = $3, carry_in = $4`,
+    [userId, iso, input.incomeVal, input.carryInVal]
+  );
 
+  await recalcCapsFromIncome(client, userId, input.incomeVal, true);
+
+  const reserveRes = await client.query("select pct from reserve_fund where user_id = $1", [userId]);
+  const pct = reserveRes.rows[0] ? Number(reserveRes.rows[0].pct) : 0;
+  if (pct > 0) {
+    const skim = Math.round(input.incomeVal * pct);
+    await client.query("update reserve_fund set saved_amount = saved_amount + $2 where user_id = $1", [userId, skim]);
+    await client.query("insert into reserve_log (user_id, date, amount) values ($1, $2, $3)", [userId, iso, skim]);
     await client.query(
-      `insert into weekly_incomes (user_id, week_start_date, income, carry_in)
-       values ($1, $2, $3, $4)
-       on conflict (user_id, week_start_date) do update set income = $3, carry_in = $4`,
-      [userId, iso, input.incomeVal, input.carryInVal]
+      `delete from reserve_log where id in (
+         select id from reserve_log where user_id = $1 order by created_at desc offset 30
+       )`,
+      [userId]
     );
+  }
 
-    await recalcCapsFromIncome(client, userId, input.incomeVal, true);
+  if (input.goalSavedVal > 0 && state.goal.id) {
+    await client.query("update goals set saved_amount = saved_amount + $2 where id = $1", [state.goal.id, input.goalSavedVal]);
+    await client.query(
+      "insert into goal_log (goal_id, week_start_date, planned_amount, actual_amount) values ($1, $2, $3, $4)",
+      [state.goal.id, iso, Math.round(plannedContribution), input.goalSavedVal]
+    );
+    await client.query(
+      `delete from goal_log where id in (
+         select id from goal_log where goal_id = $1 order by created_at desc offset 20
+       )`,
+      [state.goal.id]
+    );
+  }
+}
 
-    const reserveRes = await client.query("select pct from reserve_fund where user_id = $1", [userId]);
-    const pct = reserveRes.rows[0] ? Number(reserveRes.rows[0].pct) : 0;
-    if (pct > 0) {
-      const skim = Math.round(input.incomeVal * pct);
-      await client.query("update reserve_fund set saved_amount = saved_amount + $2 where user_id = $1", [
-        userId,
-        skim,
-      ]);
-      await client.query("insert into reserve_log (user_id, date, amount) values ($1, $2, $3)", [
-        userId,
-        iso,
-        skim,
-      ]);
-      await client.query(
-        `delete from reserve_log where id in (
-           select id from reserve_log where user_id = $1 order by created_at desc offset 30
-         )`,
-        [userId]
-      );
-    }
+export async function fixWeeklyIncome(userId: string, input: FixIncomeInput) {
+  return withTransaction((client) => fixWeeklyIncomeWithClient(client, userId, input));
+}
 
-    if (input.goalSavedVal > 0 && state.goal.id) {
-      await client.query("update goals set saved_amount = saved_amount + $2 where id = $1", [
-        state.goal.id,
-        input.goalSavedVal,
-      ]);
-      await client.query(
-        "insert into goal_log (goal_id, week_start_date, planned_amount, actual_amount) values ($1, $2, $3, $4)",
-        [state.goal.id, iso, Math.round(plannedContribution), input.goalSavedVal]
-      );
-      await client.query(
-        `delete from goal_log where id in (
-           select id from goal_log where goal_id = $1 order by created_at desc offset 20
-         )`,
-        [state.goal.id]
-      );
-    }
+export async function fixExternalWeeklyIncome(
+  userId: string,
+  input: FixIncomeInput & { externalSource: string; externalId: string }
+) {
+  return withTransaction(async (client) => {
+    const event = await client.query(
+      `insert into integration_events (user_id, source, external_id, event_type)
+       values ($1, $2, $3, 'weekly_income')
+       on conflict (user_id, source, external_id, event_type) do nothing
+       returning id`,
+      [userId, input.externalSource, input.externalId]
+    );
+    if (event.rows.length === 0) return { created: false };
+    await fixWeeklyIncomeWithClient(client, userId, input);
+    return { created: true };
   });
 }
 
