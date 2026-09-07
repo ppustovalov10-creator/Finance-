@@ -53,12 +53,30 @@ export interface Reserve {
   log: ReserveLogEntry[];
 }
 
+export interface CashEntry {
+  id: string;
+  date: string;
+  amount: number;
+}
+
+export interface CashSettings {
+  weeklyTarget: number;
+  weekdayTargets: { mon: number; tue: number; wed: number; thu: number; fri: number };
+  failedPlan: boolean;
+  opsTotal: number;
+  opsPlan: number;
+  managersTotal: number;
+  managersPlan: number;
+}
+
 export interface AppState {
   currentWeek: CurrentWeek;
   incomeLog: IncomeLogEntry[];
   goal: Goal;
   envelopes: Envelope[];
   transactions: Transaction[];
+  cashEntries: CashEntry[];
+  cashSettings: CashSettings;
   categories: string[];
   customKeywords: Record<string, string[]>;
   reserve: Reserve;

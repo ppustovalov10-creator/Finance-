@@ -2,7 +2,8 @@ import { pool, withTransaction, type DbClient } from "./db";
 import { CATEGORIES, CATEGORY_PCT, DEFAULT_IRREGULAR_CATEGORIES, ESSENTIAL_CATEGORIES, FALLBACK_CATEGORY } from "./categories";
 import { isoToDDMMYYYY, ddmmyyyyToIso, lastFriday } from "./date";
 import { categorize, extractKeyword } from "./categorize";
-import type { AppState, Envelope, GoalLogEntry, IncomeLogEntry, ReserveLogEntry, Transaction } from "./types";
+import type { AppState, CashEntry, CashSettings, Envelope, GoalLogEntry, IncomeLogEntry, ReserveLogEntry, Transaction } from "./types";
+import { generateWeekdayTargets } from "./cash";
 import { weeksRemainingToGoal } from "./date";
 
 async function loadEnvelopes(userId: string): Promise<Envelope[]> {
@@ -22,7 +23,7 @@ async function loadEnvelopes(userId: string): Promise<Envelope[]> {
 }
 
 export async function getAppState(userId: string): Promise<AppState> {
-  const [settingsRes, reserveRes, reserveLogRes, incomeRes, goalRes, envelopes, txRes, kwRes] = await Promise.all([
+  const [settingsRes, reserveRes, reserveLogRes, incomeRes, goalRes, envelopes, txRes, kwRes, cashSettingsRes, cashEntriesRes] = await Promise.all([
     pool.query("select income_floor, survival_mode, survival_caps_backup, onboarded from settings where user_id = $1", [
       userId,
     ]),
@@ -45,6 +46,8 @@ export async function getAppState(userId: string): Promise<AppState> {
       "select category_name, keyword from category_keywords where user_id = $1 order by created_at asc",
       [userId]
     ),
+    pool.query("select weekly_target, weekday_targets, failed_plan, ops_total, ops_plan, managers_total, managers_plan from cash_settings where user_id = $1", [userId]),
+    pool.query("select id, date, amount from cash_entries where user_id = $1 order by created_at asc", [userId]),
   ]);
 
   const settings = settingsRes.rows[0] || {
@@ -112,6 +115,19 @@ export async function getAppState(userId: string): Promise<AppState> {
     date: isoToDDMMYYYY(r.date),
     amount: Number(r.amount),
   }));
+  const settingsRow = cashSettingsRes.rows[0];
+  const weeklyTarget = settingsRow ? Number(settingsRow.weekly_target) : 0;
+  const weekdayTargets = (settingsRow?.weekday_targets || generateWeekdayTargets(weeklyTarget)) as CashSettings["weekdayTargets"];
+  const cashSettings: CashSettings = {
+    weeklyTarget,
+    weekdayTargets,
+    failedPlan: settingsRow?.failed_plan || false,
+    opsTotal: settingsRow ? Number(settingsRow.ops_total) : 0,
+    opsPlan: settingsRow ? Number(settingsRow.ops_plan) : 0,
+    managersTotal: settingsRow ? Number(settingsRow.managers_total) : 0,
+    managersPlan: settingsRow ? Number(settingsRow.managers_plan) : 0,
+  };
+  const cashEntries: CashEntry[] = cashEntriesRes.rows.map((r) => ({ id: r.id, date: isoToDDMMYYYY(r.date), amount: Number(r.amount) }));
 
   return {
     currentWeek,
@@ -119,6 +135,8 @@ export async function getAppState(userId: string): Promise<AppState> {
     goal,
     envelopes,
     transactions,
+    cashEntries,
+    cashSettings,
     categories,
     customKeywords,
     reserve: { saved: Number(reserveRow.saved_amount), pct: Number(reserveRow.pct), log: reserveLog },
@@ -522,6 +540,8 @@ export async function updateReserve(
 
 /** Ported 1:1 from applySurvivalMode(). */
 export async function setSurvivalMode(userId: string, on: boolean) {
+  // existing function body follows
+
   await withTransaction(async (client) => {
     const state = await getAppState(userId);
     if (on) {
@@ -575,4 +595,46 @@ export async function setSurvivalMode(userId: string, on: boolean) {
       );
     }
   });
+}
+
+export async function addCashEntry(userId: string, input: { date: string; amount: number }) {
+  const res = await pool.query("insert into cash_entries (user_id, date, amount) values ($1, $2, $3) returning id", [
+    userId,
+    ddmmyyyyToIso(input.date),
+    input.amount,
+  ]);
+  return { id: res.rows[0].id as string };
+}
+
+export async function addExternalCashEntry(
+  userId: string,
+  input: { date: string; amount: number; externalSource: string; externalId: string }
+) {
+  return withTransaction(async (client) => {
+    const event = await client.query(
+      `insert into integration_events (user_id, source, external_id, event_type)
+       values ($1, $2, $3, 'cash')
+       on conflict (user_id, source, external_id, event_type) do nothing
+       returning id`,
+      [userId, input.externalSource, input.externalId]
+    );
+    if (event.rows.length === 0) return { created: false };
+    const cash = await client.query(
+      "insert into cash_entries (user_id, date, amount) values ($1, $2, $3) returning id",
+      [userId, ddmmyyyyToIso(input.date), input.amount]
+    );
+    return { created: true, id: cash.rows[0].id as string };
+  });
+}
+
+export async function updateCashSettings(userId: string, input: CashSettings) {
+  if (input.opsPlan > input.opsTotal || input.managersPlan > input.managersTotal) throw new Error("Выполнено не может быть больше общего количества");
+  await pool.query(
+    `insert into cash_settings (user_id, weekly_target, weekday_targets, failed_plan, ops_total, ops_plan, managers_total, managers_plan)
+     values ($1, $2, $3, $4, $5, $6, $7, $8)
+     on conflict (user_id) do update set weekly_target = excluded.weekly_target, weekday_targets = excluded.weekday_targets,
+       failed_plan = excluded.failed_plan, ops_total = excluded.ops_total, ops_plan = excluded.ops_plan,
+       managers_total = excluded.managers_total, managers_plan = excluded.managers_plan, updated_at = now()`,
+    [userId, input.weeklyTarget, JSON.stringify(input.weekdayTargets), input.failedPlan, input.opsTotal, input.opsPlan, input.managersTotal, input.managersPlan]
+  );
 }
