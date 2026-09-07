@@ -33,7 +33,7 @@ export default function ExpenseTab({ state, refresh, showToast }: { state: AppSt
     const value = parseMoneyInput(amount);
     if (value <= 0 || !desc.trim()) return setError("Заполни сумму и назначение");
     try {
-      const result = await api.addTransaction({ amount: -value, desc: desc.trim(), dateStr: toDDMMYYYY(new Date()) });
+      const result = await api.addTransaction({ amount: value, desc: desc.trim(), dateStr: toDDMMYYYY(new Date()) });
       await refresh();
       setAmount("");
       setDesc("");
