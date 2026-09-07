@@ -131,7 +131,7 @@ export function calculateSalary(input: SalaryInput): number {
 export interface CashScenarioOption {
   name: "Минималка" | "Средний" | "Герой-красавчик";
   multiplier: number; weeklyCash: number; minimumWeeklyCash: number; mandatoryWeekly: number;
-  goalContribution: number; weeks: number; completionDate: string | null;
+  goalContribution: number; weeks: number; completionDate: string | null; weeklySalary: number;
 }
 
 export function selectedCashScenario<T extends { weeklyCash: number }>(options: T[], weeklyTarget: number): T | undefined {
@@ -148,7 +148,8 @@ export function cashScenarioOptions(input: { today: string; goal: { target: numb
   const labels: CashScenarioOption["name"][] = ["Минималка", "Средний", "Герой-красавчик"];
   return [1, 1.25, 1.5].map((multiplier, index) => {
     const completionWeeks = multiplier > 0 ? weeks / multiplier : Infinity;
-    return { name: labels[index], multiplier, weeklyCash: Math.ceil(minimumWeeklyCash * multiplier), minimumWeeklyCash, mandatoryWeekly, goalContribution, weeks, completionDate: input.goal.deadlineDate && Number.isFinite(completionWeeks) ? addDays(input.today, Math.ceil(completionWeeks * 7)) : null };
+    const weeklyCash = Math.ceil(minimumWeeklyCash * multiplier);
+    return { name: labels[index], multiplier, weeklyCash, minimumWeeklyCash, mandatoryWeekly, goalContribution, weeks, completionDate: input.goal.deadlineDate && Number.isFinite(completionWeeks) ? addDays(input.today, Math.ceil(completionWeeks * 7)) : null, weeklySalary: calculateSalary({ weeklyCash, ...input.salary }) };
   });
 }
 

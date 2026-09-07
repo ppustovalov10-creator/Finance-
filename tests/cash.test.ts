@@ -72,6 +72,12 @@ test("always uses the fixed 100, 125, and 150 percent scenarios", () => {
   assert.equal(options[0].completionDate, "05.10.2026");
 });
 
+test("includes the expected salary for each cash scenario", () => {
+  const salary = { failedPlan: false, opsTotal: 1, opsPlan: 1, managersTotal: 1, managersPlan: 1 };
+  const options = cashScenarioOptions({ today: "07.09.2026", goal: { target: 20_000, saved: 0, deadlineDate: "14.09.2026" }, envelopes: [], salary });
+  assert.deepEqual(options.map((option) => option.weeklySalary), options.map((option) => calculateSalary({ weeklyCash: option.weeklyCash, ...salary })));
+});
+
 test("clamps a passed or sub-week goal horizon to one week", () => {
   const [option] = cashScenarioOptions({ today: "07.09.2026", goal: { target: 25_000, saved: 5_000, deadlineDate: "08.09.2026" }, envelopes: [], salary: { failedPlan: true, opsTotal: 0, opsPlan: 0, managersTotal: 0, managersPlan: 0 } });
   assert.equal(option.weeks, 1); assert.equal(option.goalContribution, 20_000);

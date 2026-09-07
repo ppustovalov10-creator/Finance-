@@ -6,6 +6,7 @@ import { toDDMMYYYY, dowName } from "@/lib/date";
 import { fmt } from "@/lib/format";
 import type { AppState, CashEntry } from "@/lib/types";
 import { AmountInput, CancelLink, DescInput, ErrText, FieldLabel, SaveButton, Sheet, SheetHint, SheetTitle } from "./Sheet";
+import { GoalEditModal } from "./HomeModals";
 import type { Refresh, ShowToast } from "./AppShell";
 
 const cardStyle = { background: "var(--panel)", border: "1px solid var(--border)" };
@@ -23,6 +24,7 @@ export default function CashTab({ state, refresh, showToast }: { state: AppState
   const [entry, setEntry] = useState<CashEntry | null | undefined>(undefined);
   const [showScenarioChoices, setShowScenarioChoices] = useState(false);
   const [showMotivation, setShowMotivation] = useState(false);
+  const [showGoal, setShowGoal] = useState(false);
   const scenarios = cashScenarioOptions({ today, goal: state.goal, envelopes: state.envelopes, salary: settings });
   const selectedScenario = selectedCashScenario(scenarios, settings.weeklyTarget);
   const visibleScenarios = selectedScenario && !showScenarioChoices ? [selectedScenario] : scenarios;
@@ -52,6 +54,11 @@ export default function CashTab({ state, refresh, showToast }: { state: AppState
         </div>
       </div>
     </header>
+
+    <button onClick={() => setShowGoal(true)} className="w-full rounded-3xl p-4 text-left" style={cardStyle}>
+      <div className="flex items-start justify-between gap-4"><div><p className="m-0 text-[10px] font-bold uppercase tracking-[0.18em]" style={{ color: "var(--muted)" }}>Личная цель</p><strong className="mt-1 block text-base">{state.goal.target > 0 ? state.goal.name : "Настроить цель"}</strong></div><span className="text-xs font-bold" style={{ color: "var(--accent-blue)" }}>Изменить</span></div>
+      {state.goal.target > 0 ? <p className="mt-2 mb-0 text-xs" style={{ color: "var(--muted)" }}>{fmt(state.goal.saved)} из {fmt(state.goal.target)} · до {state.goal.deadlineDate || "дедлайн не задан"}</p> : <p className="mt-2 mb-0 text-xs" style={{ color: "var(--muted)" }}>Сумма и дедлайн определяют критерий зарплаты вместе с обязательными конвертами.</p>}
+    </button>
 
     <section className="rounded-3xl p-4" style={cardStyle} aria-label="Прогресс кассы за неделю">
       <div className="flex items-start justify-between gap-4">
@@ -96,8 +103,8 @@ export default function CashTab({ state, refresh, showToast }: { state: AppState
         const color = colors[option.name];
         return <button key={option.name} onClick={() => { if (!selected || showScenarioChoices) choose(option.weeklyCash); }} className="rounded-2xl p-3.5 text-left transition-transform active:scale-[0.99]" style={{ background: selected ? `color-mix(in srgb, ${color} 13%, var(--panel))` : "var(--hover)", border: `1px solid ${selected ? color : "var(--border)"}`, boxShadow: selected ? `0 8px 24px color-mix(in srgb, ${color} 10%, transparent)` : "none" }}>
           <div className="flex items-center justify-between gap-3"><span className="text-sm font-bold">{option.name}</span><span className="rounded-full px-2 py-1 text-[10px] font-bold" style={{ background: `color-mix(in srgb, ${color} 16%, transparent)`, color }}>{Math.round(option.multiplier * 100)}%</span></div>
-          <div className="mt-2 flex items-end justify-between gap-3"><strong className="font-display text-2xl leading-none tracking-[-0.04em]">{fmt(option.weeklyCash)}</strong><span className="text-[11px]" style={{ color: "var(--muted)" }}>в неделю</span></div>
-          <div className="mt-3 flex justify-between gap-2 border-t pt-2.5 text-[10px]" style={{ borderColor: "var(--line)", color: "var(--muted)" }}><span>минимум {fmt(option.minimumWeeklyCash)}</span><span>до {option.completionDate || "—"}</span></div>
+          <div className="mt-2 flex items-end justify-between gap-3"><div><span className="block text-[10px]" style={{ color: "var(--muted)" }}>ожидаемая зарплата</span><strong className="font-display block text-2xl leading-none tracking-[-0.04em]">{fmt(option.weeklySalary)}</strong></div><span className="text-[11px]" style={{ color: "var(--muted)" }}>за неделю</span></div>
+          <div className="mt-3 flex justify-between gap-2 border-t pt-2.5 text-[10px]" style={{ borderColor: "var(--line)", color: "var(--muted)" }}><span>касса {fmt(option.weeklyCash)}</span><span>до {option.completionDate || "—"}</span></div>
         </button>;
       })}</div>
     </section>
@@ -110,6 +117,7 @@ export default function CashTab({ state, refresh, showToast }: { state: AppState
     <button onClick={() => setEntry({ id: "", date: today, amount: 0 })} className="mt-6 w-full rounded-2xl border-none py-4 text-sm font-bold shadow-lg transition-transform active:scale-[0.98]" style={{ background: "var(--accent-blue)", color: "#fff", boxShadow: "0 12px 30px rgba(47, 111, 237, 0.26)" }}>+ Добавить кассу</button>
     <CashEntrySheet key={`${entry?.id ?? "new"}-${entry?.date ?? "closed"}`} entry={entry} close={() => setEntry(undefined)} refresh={refresh} showToast={showToast} />
     <MotivationSheet show={showMotivation} close={() => setShowMotivation(false)} settings={settings} refresh={refresh} showToast={showToast} />
+    <GoalEditModal key={showGoal ? `${state.goal.id}-${state.goal.target}-${state.goal.deadlineDate}` : "goal-closed"} show={showGoal} onClose={() => setShowGoal(false)} state={state} refresh={refresh} showToast={showToast} />
   </main>;
 }
 
