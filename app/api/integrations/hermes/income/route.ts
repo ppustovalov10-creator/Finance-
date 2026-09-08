@@ -12,11 +12,12 @@ interface Body {
 }
 
 export async function POST(request: Request) {
-  const userId = requireHermesSyncUserId(request);
+  const rawBody = await request.text();
+  const userId = await requireHermesSyncUserId(request, rawBody);
   if (!userId) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
 
   try {
-    const body = (await request.json()) as Body;
+    const body = JSON.parse(rawBody) as Body;
     const income = Number(body.income);
     const externalId = typeof body.externalId === "string" ? body.externalId.trim() : "";
     if (!Number.isFinite(income) || income <= 0) throw new Error("Некорректная сумма дохода");

@@ -5,11 +5,12 @@ import { parseHermesTransaction, requireHermesSyncUserId, type HermesTransaction
 export const dynamic = "force-dynamic";
 
 export async function POST(request: Request) {
-  const userId = requireHermesSyncUserId(request);
+  const rawBody = await request.text();
+  const userId = await requireHermesSyncUserId(request, rawBody);
   if (!userId) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
 
   try {
-    const body = (await request.json()) as HermesTransactionInput;
+    const body = JSON.parse(rawBody) as HermesTransactionInput;
     const transaction = parseHermesTransaction(body);
     const result = await addExternalTransaction(userId, {
       amount: transaction.amount,

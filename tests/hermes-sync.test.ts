@@ -1,6 +1,12 @@
 import assert from "node:assert/strict";
+import { generateKeyPairSync, sign } from "node:crypto";
 import test from "node:test";
-import { isAuthorizedHermesRequest, parseHermesTransaction } from "@/lib/hermes-sync";
+import {
+  buildHermesSigningPayload,
+  isAuthorizedHermesRequest,
+  isAuthorizedHermesSignature,
+  parseHermesTransaction,
+} from "@/lib/hermes-sync";
 
 test("accepts an exact Bearer integration token", () => {
   const request = new Request("https://example.test/api/integrations/hermes/state", {
@@ -45,4 +51,17 @@ test("rejects an external transaction without a valid amount, date, or external 
   assert.throws(() => parseHermesTransaction({ amount: 0, description: "Такси", date: "07.09.2026", externalId: "a" }));
   assert.throws(() => parseHermesTransaction({ amount: 500, description: "Такси", date: "2026-09-07", externalId: "a" }));
   assert.throws(() => parseHermesTransaction({ amount: 500, description: "Такси", date: "07.09.2026", externalId: "" }));
+});
+
+test("accepts a fresh Ed25519 signature only for the exact HTTP request", () => {
+  const { privateKey, publicKey } = generateKeyPairSync("ed25519");
+  const body = JSON.stringify({ amount: 300, description: "Обед", date: "08.09.2026", externalId: "telegram:6248812067:300" });
+  const timestamp = "1788900000000";
+  const url = "https://example.test/api/integrations/hermes/transactions";
+  const signature = sign(null, buildHermesSigningPayload("POST", new URL(url).pathname, timestamp, body), privateKey).toString("base64");
+  const request = new Request(url, { method: "POST", headers: { "x-hermes-timestamp": timestamp, "x-hermes-signature": signature } });
+
+  assert.equal(isAuthorizedHermesSignature(request, body, publicKey.export({ type: "spki", format: "pem" }).toString(), 1788900000000), true);
+  assert.equal(isAuthorizedHermesSignature(request, `${body} `, publicKey.export({ type: "spki", format: "pem" }).toString(), 1788900000000), false);
+  assert.equal(isAuthorizedHermesSignature(request, body, publicKey.export({ type: "spki", format: "pem" }).toString(), 1788900360001), false);
 });
