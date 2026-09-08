@@ -37,12 +37,14 @@ test("accepts a complete external transaction and normalizes its description", (
       description: "  Такси до дома  ",
       date: "07.09.2026",
       externalId: "telegram:6248812067:123",
+      category: "  Супермаркеты  ",
     }),
     {
       amount: 500,
       description: "Такси до дома",
       dateStr: "07.09.2026",
       externalId: "telegram:6248812067:123",
+      category: "Супермаркеты",
     }
   );
 });

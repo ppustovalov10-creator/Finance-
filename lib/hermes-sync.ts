@@ -11,6 +11,7 @@ export interface HermesTransactionInput {
   description: string;
   date: string;
   externalId: string;
+  category?: string;
 }
 
 export interface HermesTransaction {
@@ -18,6 +19,7 @@ export interface HermesTransaction {
   description: string;
   dateStr: string;
   externalId: string;
+  category?: string;
 }
 
 export function isAuthorizedHermesRequest(request: Request, token: string): boolean {
@@ -77,10 +79,11 @@ export function parseHermesTransaction(input: HermesTransactionInput): HermesTra
   const description = typeof input.description === "string" ? input.description.trim() : "";
   const dateStr = typeof input.date === "string" ? input.date : "";
   const externalId = typeof input.externalId === "string" ? input.externalId.trim() : "";
+  const category = typeof input.category === "string" ? input.category.trim() : "";
 
   if (!Number.isFinite(amount) || amount <= 0) throw new Error("Некорректная сумма");
   if (!/^\d{2}\.\d{2}\.\d{4}$/.test(dateStr)) throw new Error("Некорректная дата");
   if (!externalId) throw new Error("Не указан внешний идентификатор операции");
 
-  return { amount, description, dateStr, externalId };
+  return { amount, description, dateStr, externalId, ...(category ? { category } : {}) };
 }

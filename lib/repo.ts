@@ -371,10 +371,13 @@ export async function addTransaction(
 
 export async function addExternalTransaction(
   userId: string,
-  input: { amount: number; desc: string; dateStr: string; externalSource: string; externalId: string }
+  input: { amount: number; desc: string; dateStr: string; category?: string; externalSource: string; externalId: string }
 ) {
   const state = await getAppState(userId);
-  const cat = categorize(input.desc, state.customKeywords);
+  if (input.category && !state.categories.includes(input.category)) {
+    throw new Error("Неизвестная категория расхода");
+  }
+  const cat = input.category || categorize(input.desc, state.customKeywords);
   const iso = ddmmyyyyToIso(input.dateStr);
   const inserted = await pool.query(
     `insert into transactions (user_id, date, category, description, amount, external_source, external_id)

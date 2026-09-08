@@ -16,6 +16,7 @@ export async function POST(request: Request) {
       amount: transaction.amount,
       desc: transaction.description,
       dateStr: transaction.dateStr,
+      category: transaction.category,
       externalSource: "hermes",
       externalId: transaction.externalId,
     });
