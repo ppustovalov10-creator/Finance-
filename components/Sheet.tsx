@@ -3,11 +3,13 @@ export function Sheet({
   onClose,
   children,
   maxWidth,
+  dark,
 }: {
   show: boolean;
   onClose: () => void;
   children: React.ReactNode;
   maxWidth?: number;
+  dark?: boolean;
 }) {
   if (!show) return null;
   return (
@@ -20,7 +22,7 @@ export function Sheet({
     >
       <div
         className="w-full rounded-t-[22px] relative overflow-hidden px-[22px] pt-[26px] pb-[30px] max-h-[90vh] overflow-y-auto"
-        style={{ maxWidth: maxWidth || 420, background: "var(--sheet-bg)", color: "var(--sheet-ink)" }}
+        style={{ maxWidth: maxWidth || 420, background: dark ? "#121722" : "var(--sheet-bg)", color: dark ? "#F4F7FB" : "var(--sheet-ink)" }}
       >
         <div className="absolute top-0 left-0 right-0 h-[5px]" style={{ background: "linear-gradient(90deg,#6FCF7B,#2F6FED)" }} />
         {children}

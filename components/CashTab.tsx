@@ -127,19 +127,19 @@ export default function CashTab({ state, refresh, showToast }: { state: AppState
 }
 
 function PlanHistorySheet({ show, close, state }: { show: boolean; close: () => void; state: AppState }) {
-  return <Sheet show={show} onClose={close}>
+  return <Sheet show={show} onClose={close} dark>
     <SheetTitle>Архив недель</SheetTitle>
     <SheetHint>Фактическая касса и зарплата по завершённым рабочим неделям.</SheetHint>
     <div className="mt-5 grid gap-3">
       {state.incomeLog.length ? state.incomeLog.slice().reverse().map((week) => {
         const cash = aggregateCashWeek(state.cashEntries, week.startDate).weeklyTotal;
-        return <article key={week.startDate} className="rounded-2xl p-3.5" style={cardStyle}>
-          <p className="m-0 text-[10px] font-bold uppercase tracking-[0.16em]" style={{ color: "var(--muted)" }}>Неделя с {week.startDate}</p>
-          <div className="mt-3 grid grid-cols-2 gap-3 text-sm"><div><span className="block text-[10px]" style={{ color: "var(--muted)" }}>Касса</span><b className="font-mono-num">{fmt(cash)}</b></div><div><span className="block text-[10px]" style={{ color: "var(--muted)" }}>Зарплата</span><b className="font-mono-num">{fmt(week.income)}</b></div></div>
+        return <article key={week.startDate} className="rounded-2xl p-4" style={{ background: "#1C2433", border: "1px solid rgba(139,180,255,.28)" }}>
+          <p className="m-0 text-[11px] font-bold uppercase tracking-[0.12em]" style={{ color: "#B9C8DB" }}>Неделя с {week.startDate}</p>
+          <div className="mt-4 grid grid-cols-2 gap-4"><div><span className="block text-xs font-medium" style={{ color: "#92B7FF" }}>Касса</span><b className="font-mono-num mt-1 block text-[22px] leading-none" style={{ color: "#F8FBFF" }}>{fmt(cash)}</b></div><div><span className="block text-xs font-medium" style={{ color: "#82DEA1" }}>Зарплата</span><b className="font-mono-num mt-1 block text-[22px] leading-none" style={{ color: "#F8FBFF" }}>{fmt(week.income)}</b></div></div>
         </article>;
-      }) : <p className="m-0 rounded-2xl p-4 text-sm" style={cardStyle}>Пока нет завершённых недель с зафиксированной зарплатой.</p>}
+      }) : <p className="m-0 rounded-2xl p-4 text-sm" style={{ background: "#1C2433", color: "#D5DFEC" }}>Пока нет завершённых недель с зафиксированной зарплатой.</p>}
     </div>
-    <CancelLink onClick={close}>Закрыть</CancelLink>
+    <button onClick={close} className="mt-5 w-full rounded-xl py-3 text-sm font-bold" style={{ border: "1px solid rgba(139,180,255,.5)", background: "#253552", color: "#F4F7FB" }}>Закрыть</button>
   </Sheet>;
 }
 
