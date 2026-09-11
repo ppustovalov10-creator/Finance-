@@ -25,6 +25,7 @@ export default function CashTab({ state, refresh, showToast }: { state: AppState
   const [showScenarioChoices, setShowScenarioChoices] = useState(false);
   const [showMotivation, setShowMotivation] = useState(false);
   const [showGoal, setShowGoal] = useState(false);
+  const [showPlanHistory, setShowPlanHistory] = useState(false);
   const scenarios = cashScenarioOptions({ today, goal: state.goal, envelopes: state.envelopes, salary: settings });
   const selectedScenario = selectedCashScenario(scenarios, settings.weeklyTarget);
   const visibleScenarios = selectedScenario && !showScenarioChoices ? [selectedScenario] : scenarios;
@@ -49,10 +50,11 @@ export default function CashTab({ state, refresh, showToast }: { state: AppState
           <h1 className="font-display m-0 text-[30px] font-bold leading-none tracking-[-0.045em]">Касса</h1>
           <p className="mt-2 mb-0 text-sm" style={{ color: "var(--muted)" }}>{today} · {dowName(today)}</p>
         </div>
-        <div className="rounded-xl px-3 py-2 text-right" style={cardStyle}>
+        <button onClick={() => setShowPlanHistory(true)} className="rounded-xl px-3 py-2 text-right" style={cardStyle}>
           <span className="block text-[9px] font-bold uppercase tracking-[0.14em]" style={{ color: "var(--muted)" }}>Цель недели</span>
           <b className="font-mono-num text-sm">{fmt(settings.weeklyTarget)}</b>
-        </div>
+          <span className="mt-1 block text-[9px]" style={{ color: "var(--accent-blue)" }}>история</span>
+        </button>
       </div>
     </header>
 
@@ -119,8 +121,26 @@ export default function CashTab({ state, refresh, showToast }: { state: AppState
     <button onClick={() => setEntry({ id: "", date: today, amount: 0 })} className="mt-6 w-full rounded-2xl border-none py-4 text-sm font-bold shadow-lg transition-transform active:scale-[0.98]" style={{ background: "var(--accent-blue)", color: "#fff", boxShadow: "0 12px 30px rgba(47, 111, 237, 0.26)" }}>+ Добавить кассу</button>
     <CashEntrySheet key={`${entry?.id ?? "new"}-${entry?.date ?? "closed"}`} entry={entry} close={() => setEntry(undefined)} refresh={refresh} showToast={showToast} />
     <MotivationSheet show={showMotivation} close={() => setShowMotivation(false)} settings={settings} refresh={refresh} showToast={showToast} />
+    <PlanHistorySheet show={showPlanHistory} close={() => setShowPlanHistory(false)} state={state} />
     <GoalEditModal key={showGoal ? `${state.goal.id}-${state.goal.target}-${state.goal.deadlineDate}` : "goal-closed"} show={showGoal} onClose={() => setShowGoal(false)} state={state} refresh={refresh} showToast={showToast} />
   </main>;
+}
+
+function PlanHistorySheet({ show, close, state }: { show: boolean; close: () => void; state: AppState }) {
+  return <Sheet show={show} onClose={close}>
+    <SheetTitle>Архив недель</SheetTitle>
+    <SheetHint>Фактическая касса и зарплата по завершённым рабочим неделям.</SheetHint>
+    <div className="mt-5 grid gap-3">
+      {state.incomeLog.length ? state.incomeLog.slice().reverse().map((week) => {
+        const cash = aggregateCashWeek(state.cashEntries, week.startDate).weeklyTotal;
+        return <article key={week.startDate} className="rounded-2xl p-3.5" style={cardStyle}>
+          <p className="m-0 text-[10px] font-bold uppercase tracking-[0.16em]" style={{ color: "var(--muted)" }}>Неделя с {week.startDate}</p>
+          <div className="mt-3 grid grid-cols-2 gap-3 text-sm"><div><span className="block text-[10px]" style={{ color: "var(--muted)" }}>Касса</span><b className="font-mono-num">{fmt(cash)}</b></div><div><span className="block text-[10px]" style={{ color: "var(--muted)" }}>Зарплата</span><b className="font-mono-num">{fmt(week.income)}</b></div></div>
+        </article>;
+      }) : <p className="m-0 rounded-2xl p-4 text-sm" style={cardStyle}>Пока нет завершённых недель с зафиксированной зарплатой.</p>}
+    </div>
+    <CancelLink onClick={close}>Закрыть</CancelLink>
+  </Sheet>;
 }
 
 function MotivationSheet({ show, close, settings, refresh, showToast }: { show: boolean; close: () => void; settings: AppState["cashSettings"]; refresh: Refresh; showToast: ShowToast }) {
