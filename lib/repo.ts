@@ -639,6 +639,10 @@ export async function deleteCashEntry(userId: string, id: string) {
   await pool.query("delete from cash_entries where user_id = $1 and id = $2", [userId, id]);
 }
 
+export async function deleteExternalCashEntry(userId: string, id: string) {
+  await pool.query("delete from cash_entries where user_id = $1 and id = $2", [userId, id]);
+}
+
 export async function updateCashSettings(userId: string, input: CashSettings) {
   if (input.opsPlan > input.opsTotal || input.managersPlan > input.managersTotal) throw new Error("Выполнено не может быть больше общего количества");
   await pool.query(
